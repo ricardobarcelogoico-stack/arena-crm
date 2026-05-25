@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Arena CRM">
+<title>Arena Faleria — CRM</title>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root {
+  --green:#1D9E75;--green-dark:#0F6E56;--green-light:#E1F5EE;--green-border:#5DCAA5;
+  --amber-light:#FAEEDA;--amber-border:#EF9F27;--amber-dark:#633806;
+  --red-light:#FAECE7;--red-border:#F0997B;--red-dark:#993C1D;
+  --blue-light:#E6F1FB;--blue-border:#85B7EB;--blue-dark:#0C447C;
+  --purple-light:#EEEDFE;--purple-border:#AFA9EC;--purple-dark:#534AB7;
+  --bg:#F5F5F0;--card:#fff;--border:rgba(0,0,0,0.09);
+  --text:#1a1a1a;--text2:#666;--text3:#999;
+  --r:12px;--rsm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);padding:32px 24px;width:100%;max-width:360px}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo-icon{width:56px;height:56px;background:var(--green);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px}
+.login-logo-icon svg{width:28px;height:28px;fill:none;stroke:#fff;stroke-width:2}
+.login-logo h1{font-size:20px;font-weight:500;color:var(--text)}
+.login-logo p{font-size:13px;color:var(--text3);margin-top:3px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px}
+.form-group input{width:100%;padding:11px 14px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:16px;color:var(--text);font-family:inherit;outline:none}
+.form-group input:focus{border-color:var(--green-border)}
+.login-btn{width:100%;padding:13px;background:var(--green);border:none;border-radius:var(--r);font-size:15px;font-weight:500;color:#fff;cursor:pointer;font-family:inherit;margin-top:8px}
+.login-error{background:var(--red-light);border:0.5px solid var(--red-border);border-radius:var(--rsm);padding:10px 14px;font-size:13px;color:var(--red-dark);margin-bottom:14px;display:none}
+
+/* APP SHELL */
+.app{display:none;min-height:100vh;flex-direction:column}
+.app.visible{display:flex}
+.topbar{background:var(--green);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:999;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.menu-btn{background:rgba(255,255,255,0.2);border:none;border-radius:var(--rsm);width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
+.menu-btn svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2}
+.topbar-title{font-size:16px;font-weight:500;color:#fff}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.user-badge{background:rgba(255,255,255,0.2);border-radius:100px;padding:5px 10px;font-size:12px;color:#fff}
+.logout-btn{background:rgba(255,255,255,0.15);border:none;border-radius:var(--rsm);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.logout-btn svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2}
+
+/* SIDEBAR */
+.sidebar{position:fixed;top:0;left:-280px;width:280px;height:100vh;background:var(--card);border-right:0.5px solid var(--border);z-index:1001;transition:left 0.25s ease;overflow-y:auto;padding-bottom:40px}
+.sidebar.open{left:0}
+.sidebar-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:1000;display:none}
+.sidebar-overlay.show{display:block}
+.sidebar-header{background:var(--green);padding:20px;display:flex;align-items:center;gap:12px}
+.sidebar-avatar{width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:#fff;flex-shrink:0}
+.sidebar-user-name{font-size:15px;font-weight:500;color:#fff}
+.sidebar-user-role{font-size:12px;color:rgba(255,255,255,0.75);margin-top:2px}
+.sidebar-section{padding:12px 16px 4px;font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.07em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;transition:background 0.1s;border:none;background:transparent;width:100%;font-family:inherit;text-align:left}
+.nav-item:active,.nav-item.active{background:var(--green-light)}
+.nav-item svg{width:20px;height:20px;stroke:var(--text2);fill:none;stroke-width:1.5;flex-shrink:0}
+.nav-item.active svg{stroke:var(--green-dark)}
+.nav-item-text{font-size:14px;color:var(--text2)}
+.nav-item.active .nav-item-text{color:var(--green-dark);font-weight:500}
+.nav-badge{margin-left:auto;background:var(--red-light);color:var(--red-dark);border-radius:100px;padding:2px 7px;font-size:11px;font-weight:500}
+
+/* CONTENT */
+.content{flex:1;overflow-y:auto;padding-bottom:20px}
+.screen{display:none;padding:16px;max-width:700px;margin:0 auto}
+.screen.active{display:block}
+.sec-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.07em;text-transform:uppercase;margin:20px 0 8px 4px}
+.sec-label:first-child{margin-top:4px}
+
+/* CARDS */
+.card{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);overflow:hidden;margin-bottom:12px}
+.card-header{padding:12px 16px;border-bottom:0.5px solid var(--border);font-size:13px;font-weight:500;color:var(--text2)}
+.field{padding:11px 16px;border-bottom:0.5px solid var(--border)}
+.field:last-child{border-bottom:none}
+.field label{display:block;font-size:12px;color:var(--text2);margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;background:transparent;border:none;outline:none;font-size:16px;color:var(--text);font-family:inherit;padding:0;appearance:none;-webkit-appearance:none}
+.field input::placeholder,.field textarea::placeholder{color:var(--text3)}
+.field textarea{resize:none;line-height:1.5}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:var(--card);border-radius:var(--r);border:0.5px solid var(--border);padding:14px;text-align:center}
+.stat-num{font-size:26px;font-weight:500;color:var(--text);line-height:1}
+.stat-label{font-size:11px;color:var(--text3);margin-top:4px}
+.stat.s-green{background:var(--green-light);border-color:var(--green-border)}
+.stat.s-green .stat-num{color:var(--green-dark)}
+.stat.s-amber{background:var(--amber-light);border-color:var(--amber-border)}
+.stat.s-amber .stat-num{color:var(--amber-dark)}
+.stat.s-red{background:var(--red-light);border-color:var(--red-border)}
+.stat.s-red .stat-num{color:var(--red-dark)}
+.stat.s-blue{background:var(--blue-light);border-color:var(--blue-border)}
+.stat.s-blue .stat-num{color:var(--blue-dark)}
+
+/* CHIPS */
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.chip{padding:7px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:100px;font-size:13px;color:var(--text2);cursor:pointer;font-family:inherit;white-space:nowrap}
+.chip.on-green{background:var(--green-light);border-color:var(--green-border);color:var(--green-dark);font-weight:500}
+.chip.on-amber{background:var(--amber-light);border-color:var(--amber-border);color:var(--amber-dark);font-weight:500}
+.chip.on-red{background:var(--red-light);border-color:var(--red-border);color:var(--red-dark);font-weight:500}
+.chip.on-blue{background:var(--blue-light);border-color:var(--blue-border);color:var(--blue-dark);font-weight:500}
+.arena-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}
+.arena-chip{padding:8px 10px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:12px;color:var(--text2);cursor:pointer;text-align:center;font-family:inherit;line-height:1.3}
+.arena-chip.on{background:var(--green-light);border-color:var(--green-border);color:var(--green-dark);font-weight:500}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:14px;background:var(--green);border:none;border-radius:var(--r);font-size:15px;font-weight:500;color:#fff;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px}
+.btn-primary:active{background:var(--green-dark)}
+.btn-primary:disabled{background:#aaa}
+.btn-secondary{width:100%;padding:12px;background:transparent;border:0.5px solid var(--border);border-radius:var(--r);font-size:14px;color:var(--text2);cursor:pointer;font-family:inherit;margin-bottom:10px}
+.btn-small{padding:6px 12px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:12px;color:var(--green-dark);cursor:pointer;font-family:inherit;white-space:nowrap}
+
+/* BADGES */
+.badge{font-size:11px;padding:3px 8px;border-radius:100px}
+.badge-alto{background:var(--green-light);color:var(--green-dark)}
+.badge-medio{background:var(--amber-light);color:var(--amber-dark)}
+.badge-bajo{background:var(--red-light);color:var(--red-dark)}
+
+/* LIST ITEMS */
+.list-item{padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer}
+.list-item:last-child{border-bottom:none}
+.list-item:active{background:var(--bg)}
+.list-avatar{width:40px;height:40px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:var(--green-dark);flex-shrink:0}
+.list-info{flex:1;min-width:0}
+.list-name{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-sub{font-size:12px;color:var(--text3);margin-top:1px}
+
+/* MAP */
+#map{height:320px;border-radius:var(--r);margin-bottom:12px;border:0.5px solid var(--border);overflow:hidden}
+.leaflet-popup-content-wrapper{border-radius:var(--rsm)!important;box-shadow:none!important;border:0.5px solid var(--border)!important}
+.popup-nombre{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.popup-sub{font-size:12px;color:var(--text3)}
+.popup-actions{display:flex;gap:6px;margin-top:8px}
+.popup-btn{padding:5px 10px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:12px;color:var(--green-dark);cursor:pointer;font-family:inherit}
+
+/* COTIZADOR */
+.precio-row{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:0.5px solid var(--border)}
+.precio-row:last-child{border-bottom:none}
+.precio-label{font-size:14px;color:var(--text)}
+.precio-val{font-size:14px;font-weight:500;color:var(--text)}
+.total-row{background:var(--green-light);padding:14px 16px;border-radius:0 0 var(--r) var(--r)}
+.total-label{font-size:13px;color:var(--green-dark);font-weight:500}
+.total-val{font-size:22px;font-weight:500;color:var(--green-dark)}
+
+/* AI */
+.ai-box{background:var(--purple-light);border:0.5px solid var(--purple-border);border-radius:var(--r);padding:14px;margin-bottom:12px;display:none}
+.ai-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:13px;font-weight:500;color:var(--purple-dark)}
+.ai-content{font-size:13px;color:var(--purple-dark);line-height:1.6;white-space:pre-wrap}
+
+/* PROGRESS */
+.progress-bar{display:flex;gap:4px;margin-bottom:16px}
+.ps{flex:1;height:4px;border-radius:100px;background:var(--border)}
+.ps.done{background:var(--green)}
+.ps.active{background:var(--green-border)}
+.step{display:none}
+.step.active{display:block}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1a1a1a;color:#fff;padding:12px 20px;border-radius:100px;font-size:14px;font-weight:500;transition:transform 0.3s;z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.err{background:#c0392b}
+
+/* ADMIN USER MGMT */
+.user-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:0.5px solid var(--border)}
+.user-item:last-child{border-bottom:none}
+.user-role-badge{font-size:11px;padding:3px 8px;border-radius:100px;margin-left:auto}
+.role-admin{background:var(--purple-light);color:var(--purple-dark)}
+.role-vendedor{background:var(--blue-light);color:var(--blue-dark)}
+
+/* SEARCH */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-input{width:100%;padding:11px 16px 11px 40px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);font-size:16px;color:var(--text);outline:none;font-family:inherit}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;pointer-events:none}
+
+/* SPINNER */
+.spinner{width:18px;height:18px;border:2.5px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* BAR CHART */
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.bar-label{font-size:13px;color:var(--text2);width:120px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:8px;background:var(--bg);border-radius:100px;overflow:hidden}
+.bar-fill{height:100%;border-radius:100px;background:var(--green);transition:width 0.5s}
+.bar-num{font-size:13px;font-weight:500;color:var(--text2);min-width:20px;text-align:right}
+
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1a1a1a;--card:#2a2a2a;--border:rgba(255,255,255,0.09);--text:#f0f0f0;--text2:#aaa;--text3:#555}
+  .chip,.arena-chip{background:#333}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      </div>
+      <h1>Arena Faleria</h1>
+      <p>Sistema de gestión comercial</p>
+    </div>
+    <div class="login-error" id="login-error">Usuario o contraseña incorrectos</div>
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" id="login-user" placeholder="tu.usuario" autocomplete="username" autocapitalize="none"/>
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menú">
+        <svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <span class="topbar-title" id="topbar-title">Inicio</span>
+    </div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-badge">—</span>
+      <button class="logout-btn" onclick="doLogout()" aria-label="Cerrar sesión">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-avatar" id="sidebar-avatar">R</div>
+      <div>
+        <div class="sidebar-user-name" id="sidebar-name">—</div>
+        <div class="sidebar-user-role" id="sidebar-role">—</div>
+      </div>
+    </div>
+    <div class="sidebar-section">Principal</div>
+    <button class="nav-item active" onclick="goTo('inicio')" id="nav-inicio">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+      <span class="nav-item-text">Inicio</span>
+    </button>
+    <button class="nav-item" onclick="goTo('clientes')" id="nav-clientes">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <span class="nav-item-text">Clientes</span>
+    </button>
+    <button class="nav-item" onclick="goTo('formulario')" id="nav-formulario">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span class="nav-item-text">Nueva visita</span>
+    </button>
+    <button class="nav-item" onclick="goTo('reporte')" id="nav-reporte">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span class="nav-item-text">Reporte de visita</span>
+    </button>
+    <button class="nav-item" onclick="goTo('cotizador')" id="nav-cotizador">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      <span class="nav-item-text">Cotizador</span>
+    </button>
+    <button class="nav-item" onclick="goTo('rutas')" id="nav-rutas">
+      <svg viewBox="0 0 24 24"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+      <span class="nav-item-text">Rutas</span>
+    </button>
+    <button class="nav-item" onclick="goTo('cotizaciones')" id="nav-cotizaciones">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span class="nav-item-text">Mis cotizaciones</span>
+      <span class="nav-badge" id="cot-badge" style="display:none">0</span>
+    </button>
+    <button class="nav-item admin-only" onclick="goTo('aprobar')" id="nav-aprobar">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      <span class="nav-item-text">Aprobar cotizaciones</span>
+      <span class="nav-badge" id="aprobar-badge" style="display:none">0</span>
+    </button>
+    <button class="nav-item admin-only" onclick="goTo('pagos')" id="nav-pagos">
+      <svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+      <span class="nav-item-text">Pagos</span>
+    </button>
+    <div class="sidebar-section admin-only" id="admin-nav-section">Admin</div>
+    <button class="nav-item admin-only" onclick="goTo('dashboard')" id="nav-dashboard">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span class="nav-item-text">Dashboard</span>
+    </button>
+    <button class="nav-item admin-only" onclick="goTo('mapa')" id="nav-mapa">
+      <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      <span class="nav-item-text">Mapa clientes</span>
+    </button>
+    <button class="nav-item admin-only" onclick="goTo('usuarios')" id="nav-usuarios">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="nav-item-text">Usuarios</span>
+    </button>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- INICIO -->
+    <div class="screen active" id="screen-inicio">
+      <div class="stats-grid" id="home-stats">
+        <div class="stat s-blue"><div class="stat-num" id="hs-total">—</div><div class="stat-label">Total clientes</div></div>
+        <div class="stat s-green"><div class="stat-num" id="hs-alto">—</div><div class="stat-label">Potencial alto</div></div>
+        <div class="stat s-amber"><div class="stat-num" id="hs-semana">—</div><div class="stat-label">Seguimientos esta semana</div></div>
+        <div class="stat s-red"><div class="stat-num" id="hs-hoy">—</div><div class="stat-label">Vencidos hoy</div></div>
+      </div>
+      <div class="sec-label">Acciones rápidas</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <button onclick="goTo('formulario')" style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;text-align:center;font-family:inherit">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="margin-bottom:6px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+          <div style="font-size:13px;color:var(--text2)">Nueva visita</div>
+        </button>
+        <button onclick="goTo('cotizador')" style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;text-align:center;font-family:inherit">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="margin-bottom:6px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          <div style="font-size:13px;color:var(--text2)">Cotizar</div>
+        </button>
+        <button onclick="goTo('reporte')" style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;text-align:center;font-family:inherit">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="margin-bottom:6px"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <div style="font-size:13px;color:var(--text2)">Reporte visita</div>
+        </button>
+        <button onclick="goTo('rutas')" style="background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;text-align:center;font-family:inherit">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.5" style="margin-bottom:6px"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>
+          <div style="font-size:13px;color:var(--text2)">Rutas</div>
+        </button>
+      </div>
+      <div class="sec-label">Seguimientos pendientes</div>
+      <div class="card" id="home-seguimientos"><div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Cargando...</div></div>
+    </div>
+
+    <!-- CLIENTES -->
+    <div class="screen" id="screen-clientes">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="text" placeholder="Buscar cliente..." id="cliente-search" oninput="buscarCliente()" autocomplete="off"/>
+      </div>
+      <div id="clientes-lista"></div>
+    </div>
+
+    <!-- FORMULARIO NUEVA VISITA -->
+    <div class="screen" id="screen-formulario">
+      <div class="sec-label">Datos del cliente</div>
+      <div class="card">
+        <div class="field"><label>Nombre del cliente / empresa *</label><input type="text" id="f-nombre" placeholder="Ej. Ferretería El Martillo" autocomplete="off"/></div>
+        <div class="field"><label>Contacto principal</label><input type="text" id="f-contacto" placeholder="Nombre completo"/></div>
+        <div class="field"><label>Teléfono</label><input type="tel" id="f-telefono" placeholder="+1 809 000 0000" inputmode="tel"/></div>
+        <div class="field"><label>WhatsApp (si es diferente)</label><input type="tel" id="f-whatsapp" placeholder="+1 809 000 0000" inputmode="tel"/></div>
+        <div class="field"><label>Dirección / referencia</label><input type="text" id="f-direccion" placeholder="Calle, sector, municipio" autocomplete="off"/></div>
+        <div class="field">
+          <label>Provincia</label>
+          <select id="f-provincia"><option value="">Seleccionar...</option><option>Distrito Nacional</option><option>Santo Domingo</option><option>Santiago</option><option>La Vega</option><option>San Cristóbal</option><option>Peravia</option><option>Azua</option><option>San Pedro de Macorís</option><option>La Romana</option><option>Higüey</option><option>El Seibo</option><option>Hato Mayor</option><option>Puerto Plata</option><option>Otra</option></select>
+        </div>
+        <div class="field">
+          <label>Georreferencia GPS</label>
+          <button type="button" onclick="captureGeo('f')" id="f-geo-btn" style="display:flex;align-items:center;gap:8px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:8px 14px;font-size:14px;color:var(--green-dark);cursor:pointer;font-family:inherit">📍 <span id="f-geo-text">Capturar GPS</span></button>
+          <div id="f-geo-coords" style="font-size:12px;color:var(--text2);margin-top:4px;font-family:monospace"></div>
+        </div>
+      </div>
+      <div class="sec-label">Información comercial</div>
+      <div class="card">
+        <div class="field">
+          <label>Tipo de cliente</label>
+          <select id="f-tipo"><option value="">Seleccionar...</option><option>Constructor / contratista</option><option>Ferreterías / distribuidores</option><option>Empresa constructora</option><option>Fábrica de blocks</option><option>Campo de golf</option><option>Intermediario</option><option>Gobierno / municipio</option><option>Persona particular</option></select>
+        </div>
+        <div class="field">
+          <label>Tipos de arena / material <span style="font-size:11px;color:var(--text3)">(selecciona varios)</span></label>
+          <div class="arena-grid" id="f-arenas">
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena blocks" type="button">Arena blocks</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena lavada" type="button">Arena lavada</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena de pañete" type="button">Arena de pañete</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena golf 2.0mm" type="button">Arena golf 2.0mm</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena golf 1.5mm" type="button">Arena golf 1.5mm</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena golf 1mm" type="button">Arena golf 1mm</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Arena fertilizantes" type="button">Arena fertilizantes</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Grava gruesa" type="button">Grava gruesa</button>
+            <button class="arena-chip" onclick="toggleArena(this,'f')" data-val="Grava fina" type="button">Grava fina</button>
+          </div>
+        </div>
+        <div class="field"><label>Volumen estimado mensual</label><input type="text" id="f-volumen" placeholder="Ej. 20 m³ / mes" autocomplete="off"/></div>
+        <div class="field">
+          <label>¿Tiene proveedor actual?</label>
+          <select id="f-proveedor"><option value="">Seleccionar...</option><option>Sí — está satisfecho</option><option>Sí — está insatisfecho</option><option>No — está buscando</option></select>
+        </div>
+      </div>
+      <div class="sec-label">Potencial de compra</div>
+      <div class="card">
+        <div class="field">
+          <label>Calificación</label>
+          <div class="chips" id="f-potencial">
+            <button class="chip" onclick="selectChip('f-potencial','alto','on-green')" type="button">🔥 Alto</button>
+            <button class="chip" onclick="selectChip('f-potencial','medio','on-amber')" type="button">⚡ Medio</button>
+            <button class="chip" onclick="selectChip('f-potencial','bajo','on-red')" type="button">🌱 Bajo</button>
+          </div>
+        </div>
+      </div>
+      <div class="sec-label">Notas</div>
+      <div class="card">
+        <div class="field"><label>Observaciones de la visita</label><textarea id="f-notas" rows="3" placeholder="Condiciones del lugar, acuerdos, seguimiento..."></textarea></div>
+        <div class="field"><label>Fecha de próximo contacto</label><input type="date" id="f-seguimiento"/></div>
+      </div>
+      <button class="btn-primary" onclick="guardarVisita()" id="f-submit-btn">💾 Guardar visita</button>
+    </div>
+
+    <!-- REPORTE DE VISITA -->
+    <div class="screen" id="screen-reporte">
+      <div class="progress-bar" id="rep-progress">
+        <div class="ps active" id="rps-1"></div><div class="ps" id="rps-2"></div><div class="ps" id="rps-3"></div><div class="ps" id="rps-4"></div>
+      </div>
+      <div class="step active" id="rstep-1">
+        <div class="sec-label">¿Para qué cliente?</div>
+        <div class="card">
+          <div class="field">
+            <label>Buscar cliente</label>
+            <input type="text" id="rep-cliente-search" placeholder="Escribe el nombre..." oninput="buscarClienteReporte()" autocomplete="off"/>
+            <div id="rep-cliente-found" style="background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:10px 14px;margin-top:8px;display:none">
+              <div id="rep-cliente-nombre" style="font-size:14px;font-weight:500;color:var(--green-dark)"></div>
+              <div id="rep-cliente-sub" style="font-size:12px;color:var(--green-dark);opacity:0.8;margin-top:2px"></div>
+            </div>
+            <div id="rep-search-lista"></div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="repIrPaso(2)">Siguiente →</button>
+        <button class="btn-secondary" onclick="repNuevoCliente()">+ Cliente nuevo</button>
+      </div>
+      <div class="step" id="rstep-2">
+        <div class="card">
+          <div class="card-header">1 — La visita</div>
+          <div class="field"><label>Tipo de contacto</label><div class="chips" id="rc-tipo"><button class="chip" onclick="selectChip('rc-tipo','Visita presencial','on-green')" type="button">🤝 Presencial</button><button class="chip" onclick="selectChip('rc-tipo','Llamada telefónica','on-blue')" type="button">📞 Llamada</button><button class="chip" onclick="selectChip('rc-tipo','WhatsApp','on-green')" type="button">💬 WhatsApp</button></div></div>
+          <div class="field"><label>¿Con quién hablaste?</label><div class="chips" id="rc-quien"><button class="chip" onclick="selectChip('rc-quien','Dueño','on-green')" type="button">👤 Dueño</button><button class="chip" onclick="selectChip('rc-quien','Encargado','on-green')" type="button">👔 Encargado</button><button class="chip" onclick="selectChip('rc-quien','Empleado','on-green')" type="button">🧑 Empleado</button><button class="chip" onclick="selectChip('rc-quien','Sin decisor','on-amber')" type="button">❌ Sin decisor</button></div></div>
+          <div class="field"><label>Actitud del cliente</label><div class="chips" id="rc-actitud"><button class="chip" onclick="selectChip('rc-actitud','Muy interesado','on-green')" type="button">🔥 Muy interesado</button><button class="chip" onclick="selectChip('rc-actitud','Interesado','on-green')" type="button">👍 Interesado</button><button class="chip" onclick="selectChip('rc-actitud','Frío','on-amber')" type="button">😐 Frío</button><button class="chip" onclick="selectChip('rc-actitud','Negativo','on-red')" type="button">👎 Negativo</button></div></div>
+        </div>
+        <button class="btn-primary" onclick="repIrPaso(3)">Siguiente →</button>
+        <button class="btn-secondary" onclick="repIrPaso(1)">← Atrás</button>
+      </div>
+      <div class="step" id="rstep-3">
+        <div class="card">
+          <div class="card-header">2 — Lo comercial</div>
+          <div class="field"><label>Productos de interés</label><div class="arena-grid" id="rc-arenas"><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Arena blocks" type="button">Arena blocks</button><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Arena lavada" type="button">Arena lavada</button><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Arena de pañete" type="button">Arena de pañete</button><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Arena golf 2.0mm" type="button">Arena golf 2.0mm</button><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Arena golf 1.5mm" type="button">Arena golf 1.5mm</button><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Grava gruesa" type="button">Grava gruesa</button><button class="arena-chip" onclick="toggleArena(this,'rc')" data-val="Grava fina" type="button">Grava fina</button></div></div>
+          <div class="field"><label>Volumen mencionado</label><input type="text" id="rc-volumen" placeholder="Ej. 20 m³, 5 camiones..."/></div>
+          <div class="field"><label>¿Se dio cotización?</label><div class="chips" id="rc-cotizacion"><button class="chip" onclick="selectChip('rc-cotizacion','Sí','on-green')" type="button">✅ Sí</button><button class="chip" onclick="selectChip('rc-cotizacion','Solo conversación','on-amber')" type="button">💬 Conversación</button><button class="chip" onclick="selectChip('rc-cotizacion','Pidió formal','on-blue')" type="button">📄 Pidió formal</button></div></div>
+          <div class="field"><label>Objeción principal</label><div class="chips" id="rc-objecion" style="flex-wrap:wrap"><button class="chip" onclick="selectChip('rc-objecion','Precio alto','on-red')" type="button">💰 Precio</button><button class="chip" onclick="selectChip('rc-objecion','Tiene proveedor','on-amber')" type="button">🔄 Proveedor</button><button class="chip" onclick="selectChip('rc-objecion','No necesita ahora','on-amber')" type="button">⏳ No necesita</button><button class="chip" onclick="selectChip('rc-objecion','Sin objeción','on-green')" type="button">✅ Sin objeción</button></div></div>
+        </div>
+        <button class="btn-primary" onclick="repIrPaso(4)">Siguiente →</button>
+        <button class="btn-secondary" onclick="repIrPaso(2)">← Atrás</button>
+      </div>
+      <div class="step" id="rstep-4">
+        <div class="card">
+          <div class="card-header">3 — Cierre y seguimiento</div>
+          <div class="field"><label>Probabilidad de cierre</label><div class="chips" id="rc-prob"><button class="chip" onclick="selectChip('rc-prob','Alta','on-green')" type="button">🔥 Alta</button><button class="chip" onclick="selectChip('rc-prob','Media','on-amber')" type="button">⚡ Media</button><button class="chip" onclick="selectChip('rc-prob','Baja','on-red')" type="button">🌱 Baja</button></div></div>
+          <div class="field"><label>Próximo paso</label><div class="chips" id="rc-paso" style="flex-wrap:wrap"><button class="chip" onclick="selectChip('rc-paso','Llamar','on-green')" type="button">📞 Llamar</button><button class="chip" onclick="selectChip('rc-paso','Enviar cotización','on-blue')" type="button">📄 Cotización</button><button class="chip" onclick="selectChip('rc-paso','Visitar','on-green')" type="button">🤝 Visitar</button><button class="chip" onclick="selectChip('rc-paso','Cerrar pedido','on-green')" type="button">✅ Cerrar</button></div></div>
+          <div class="field"><label>Fecha próximo paso</label><input type="date" id="rc-fecha"/></div>
+          <div class="field"><label>¿Necesitas apoyo?</label><div class="chips" id="rc-apoyo"><button class="chip" onclick="selectChip('rc-apoyo','No','on-green')" type="button">👍 No</button><button class="chip" onclick="selectChip('rc-apoyo','Sí - precio','on-amber')" type="button">💰 Precio</button><button class="chip" onclick="selectChip('rc-apoyo','Sí - cliente difícil','on-red')" type="button">🆘 Difícil</button></div></div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="field"><label>Notas adicionales</label><textarea id="rc-notas" rows="3" placeholder="Detalles importantes de la visita..."></textarea></div>
+        </div>
+        <button class="btn-primary" onclick="generarReporteIA()" id="btn-gen-ia">✨ Generar resumen con IA</button>
+        <div class="ai-box" id="rep-ai-box">
+          <div class="ai-header">✨ Resumen generado por IA</div>
+          <div class="ai-content" id="rep-ai-content"></div>
+        </div>
+        <button class="btn-primary" onclick="guardarReporte()" id="btn-guardar-rep" style="display:none">💾 Guardar reporte</button>
+        <button class="btn-secondary" onclick="repIrPaso(3)">← Atrás</button>
+      </div>
+    </div>
+
+    <!-- COTIZADOR -->
+    <div class="screen" id="screen-cotizador">
+      <div class="sec-label">Punto de origen (cantera)</div>
+      <div class="card">
+        <div class="field">
+          <label>Cantera / depósito de despacho</label>
+          <select id="cot-cantera" onchange="calcCotizacion()">
+            <option value="18.907931781426505,-69.35947147481276">Cantera principal</option>
+          </select>
+        </div>
+      </div>
+      <div class="sec-label">Datos de la cotización</div>
+      <div class="card">
+        <div class="field">
+          <label>Cliente</label>
+          <select id="cot-cliente-select" onchange="selClienteCotizador()">
+            <option value="">Seleccionar cliente...</option>
+          </select>
+        </div>
+        <div class="field"><label>O escribe un cliente nuevo</label><input type="text" id="cot-cliente" placeholder="Nombre del cliente" autocomplete="off"/></div>
+        <div class="field">
+          <label>Tipo de arena</label>
+          <select id="cot-arena" onchange="calcCotizacion()">
+            <option value="">Seleccionar...</option>
+            <option value="1200">Arena lavada — RD$1,200/m³</option>
+            <option value="1000">Arena blocks — RD$1,000/m³</option>
+            <option value="1000">Arena de pañete — RD$1,000/m³</option>
+            <option value="800">Arena zarandeada — RD$800/m³</option>
+          </select>
+        </div>
+        <div class="field"><label>Volumen (m³)</label><input type="number" id="cot-vol" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
+        <div class="field">
+          <label>Distancia al cliente</label>
+          <button type="button" onclick="calcDistanciaGPS()" style="width:100%;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:10px 14px;font-size:14px;font-weight:500;color:var(--green-dark);cursor:pointer;font-family:inherit;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px">🛣️ Calcular distancia real por carretera</button>
+          <div id="cot-km-display" style="font-size:12px;color:var(--text3);margin-top:6px;text-align:center"></div>
+          <div style="margin-top:8px">
+            <label style="font-size:11px;color:var(--text3)">Editar distancia si es necesario (km)</label>
+            <input type="number" id="cot-km" placeholder="0" inputmode="decimal" oninput="calcCotizacion()" step="0.1"/>
+          </div>
+        </div>
+      </div>
+      <div class="card" id="cot-result" style="display:none">
+        <div class="precio-row"><span class="precio-label">Arena (m³ × precio)</span><span class="precio-val" id="cot-subtotal-arena">—</span></div>
+        <div class="precio-row"><span class="precio-label" id="cot-flete-label">Flete (RD$14/m³/km)</span><span class="precio-val" id="cot-subtotal-flete">—</span></div>
+        <div class="precio-row" style="background:var(--blue-light)"><span class="precio-label" style="color:var(--blue-dark);font-size:12px">Distancia calculada</span><span class="precio-val" style="color:var(--blue-dark)" id="cot-km-resultado">—</span></div>
+        <div class="total-row" style="display:flex;align-items:center;justify-content:space-between">
+          <span class="total-label">Total estimado</span>
+          <span class="total-val" id="cot-total">—</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="generarCotPDF()" id="cot-pdf-btn" style="display:none">📄 Guardar cotización</button>
+      <button class="btn-secondary" onclick="copiarCotizacion()">📋 Copiar mensaje para WhatsApp</button>
+    </div>
+
+    <!-- RUTAS -->
+    <div class="screen" id="screen-rutas">
+      <div class="sec-label">¿Desde dónde sales hoy?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="zonas-grid">
+        <button class="chip" onclick="setOrigen('Santo Domingo','18.4861,-69.9312')" id="zona-sd" style="justify-content:center">Santo Domingo</button>
+        <button class="chip" onclick="setOrigen('El Seibo','18.7656,-69.0406')" id="zona-se" style="justify-content:center">El Seibo</button>
+        <button class="chip" onclick="setOrigen('Hato Mayor','18.7642,-69.2561')" id="zona-hm" style="justify-content:center">Hato Mayor</button>
+        <button class="chip" onclick="setOrigen('Higüey','18.6144,-68.7074')" id="zona-hi" style="justify-content:center">Higüey</button>
+      </div>
+      <div class="sec-label">Clientes disponibles</div>
+      <div class="card" id="rutas-lista"></div>
+      <div id="ruta-result" style="display:none">
+        <div class="sec-label">Ruta del día</div>
+        <div class="card" id="ruta-ordenada"></div>
+        <button class="btn-primary" onclick="abrirRutaMaps()" style="margin-top:12px">📍 Abrir en Google Maps</button>
+        <button class="btn-secondary" onclick="limpiarRuta()">Limpiar selección</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD (ADMIN) -->
+    <div class="screen" id="screen-dashboard">
+      <button class="btn-secondary" onclick="cargarDashboard()" style="margin-bottom:16px">↻ Actualizar</button>
+      <div class="stats-grid" id="dash-stats"></div>
+      <div class="sec-label">Por provincia</div>
+      <div class="card" id="dash-provincias"></div>
+      <div class="sec-label">Por potencial</div>
+      <div class="card" id="dash-potencial"></div>
+      <div class="sec-label">Arenas más solicitadas</div>
+      <div class="card" id="dash-arenas"></div>
+      <div class="sec-label">Seguimientos pendientes</div>
+      <div class="card" id="dash-seguimientos"></div>
+      <div class="sec-label">Ventas</div>
+      <div id="dash-ventas"><div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Cargando ventas...</div></div>
+    </div>
+
+    <!-- MAPA (ADMIN) -->
+    <div class="screen" id="screen-mapa">
+      <div id="map"></div>
+      <div class="sec-label">Filtrar por zona</div>
+      <div class="chips" id="mapa-filtros" style="margin-bottom:12px;flex-wrap:wrap">
+        <button class="chip on-green" onclick="filtrarMapa('todos')" type="button">Todos</button>
+        <button class="chip" onclick="filtrarMapa('Santo Domingo')" type="button">Sto. Domingo</button>
+        <button class="chip" onclick="filtrarMapa('San Pedro de Macorís')" type="button">San Pedro</button>
+        <button class="chip" onclick="filtrarMapa('Hato Mayor')" type="button">Hato Mayor</button>
+        <button class="chip" onclick="filtrarMapa('El Seibo')" type="button">El Seibo</button>
+        <button class="chip" onclick="filtrarMapa('Higüey')" type="button">Higüey</button>
+      </div>
+    </div>
+
+    <!-- VENTAS -->
+    <div class="screen" id="screen-ventas">
+      <div class="sec-label">Registrar venta cerrada</div>
+      <div class="card">
+        <div class="field"><label>Cliente *</label><input type="text" id="v-cliente" placeholder="Nombre del cliente" autocomplete="off"/></div>
+        <div class="field">
+          <label>Producto vendido</label>
+          <select id="v-arena" onchange="calcVenta()">
+            <option value="">Seleccionar...</option>
+            <option value="1200">Arena lavada — RD$1,200/m³</option>
+            <option value="1000">Arena blocks — RD$1,000/m³</option>
+            <option value="1000">Arena de pañete — RD$1,000/m³</option>
+            <option value="800">Arena zarandeada — RD$800/m³</option>
+          </select>
+        </div>
+        <div class="field"><label>Volumen vendido (m³)</label><input type="number" id="v-vol" placeholder="0" inputmode="decimal" oninput="calcVenta()"/></div>
+        <div class="field"><label>Distancia entrega (km)</label><input type="number" id="v-km" placeholder="0" inputmode="decimal" oninput="calcVenta()"/></div>
+        <div class="field"><label>Fecha de entrega</label><input type="date" id="v-fecha"/></div>
+        <div class="field"><label>Notas del pedido</label><input type="text" id="v-notas" placeholder="Ej. Pago en efectivo, entrega lunes..." autocomplete="off"/></div>
+      </div>
+      <div class="card" id="v-result" style="display:none">
+        <div class="precio-row"><span class="precio-label">Subtotal arena</span><span class="precio-val" id="v-sub-arena">—</span></div>
+        <div class="precio-row"><span class="precio-label">Flete (RD$14/m³/km)</span><span class="precio-val" id="v-sub-flete">—</span></div>
+        <div class="total-row" style="display:flex;align-items:center;justify-content:space-between">
+          <span class="total-label">Total venta</span>
+          <span class="total-val" id="v-total">—</span>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="guardarVenta()" id="v-submit-btn">✅ Confirmar venta</button>
+    </div>
+
+    <!-- MIS COTIZACIONES -->
+    <div class="screen" id="screen-cotizaciones">
+      <div class="stats-grid" id="mis-cot-stats"></div>
+      <div id="mis-cot-lista"></div>
+    </div>
+
+    <!-- APROBAR COTIZACIONES (ADMIN) -->
+    <div class="screen" id="screen-aprobar">
+      <div class="sec-label">Cotizaciones pendientes de aprobación</div>
+      <div id="aprobar-lista"><div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Cargando...</div></div>
+    </div>
+
+    <!-- PAGOS (ADMIN) -->
+    <div class="screen" id="screen-pagos">
+      <div class="stats-grid" id="pagos-stats"></div>
+      <div class="sec-label">Ventas pendientes de pago</div>
+      <div id="pagos-lista"></div>
+      <div class="sec-label">Historial de pagos</div>
+      <div id="pagos-historial"></div>
+    </div>
+
+    <!-- USUARIOS (ADMIN) -->
+    <div class="screen" id="screen-usuarios">
+      <div class="card" id="users-list"></div>
+      <div class="sec-label">Agregar usuario</div>
+      <div class="card">
+        <div class="field"><label>Nombre completo</label><input type="text" id="new-nombre" placeholder="Ej. Juan Pérez" autocomplete="off"/></div>
+        <div class="field"><label>Teléfono del vendedor</label><input type="tel" id="new-telefono" placeholder="+1 809 000 0000" inputmode="tel"/></div>
+        <div class="field"><label>Usuario (sin espacios)</label><input type="text" id="new-user" placeholder="juan.perez" autocomplete="off" autocapitalize="none"/></div>
+        <div class="field"><label>Contraseña</label><input type="password" id="new-pass" placeholder="••••••••"/></div>
+        <div class="field">
+          <label>Rol</label>
+          <select id="new-rol"><option value="vendedor">Vendedor</option><option value="admin">Administrador</option></select>
+        </div>
+      </div>
+      <button class="btn-primary" onclick="agregarUsuario()">+ Agregar usuario</button>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbwhOg3BVzCRC3TVHRoSsTxd8CZiT2OsmLT3HlAQwfbc6ptHGfOWLkMwtuFTKpk1VyY7/exec';
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyBKPEWqeACjm-XbLuO-qvbQpJDMgrzkLR4';
+
+let currentUser = null;
+let allClientes = [];
+let selectedArenas = {f:[], rc:[]};
+let repClienteSeleccionado = null;
+let repResumenIA = '';
+let rutaOrigen = null;
+let rutaOrigenCoords = null;
+let rutaSeleccionados = new Set();
+let rutaClientesOrdenados = [];
+let geoLat = {f:null};
+let geoLng = {f:null};
+let mapaInstance = null;
+let mapaMarkers = [];
+let mapaAllClientes = [];
+
+// USUARIOS (guardados en localStorage)
+function getUsers() {
+  const def = [
+    {nombre:'Ricardo Barceló', user:'ricardo', pass:'admin123', rol:'admin', telefono:'+1 809 796 6579'},
+    {nombre:'Admin 2', user:'admin2', pass:'admin456', rol:'admin', telefono:''}
+  ];
+  const saved = localStorage.getItem('crm_users');
+  return saved ? JSON.parse(saved) : def;
+}
+function saveUsers(users) { localStorage.setItem('crm_users', JSON.stringify(users)); }
+
+// LOGIN
+function doLogin() {
+  const u = document.getElementById('login-user').value.trim().toLowerCase();
+  const p = document.getElementById('login-pass').value;
+  const users = getUsers();
+  const found = users.find(x => x.user === u && x.pass === p);
+  if (!found) {
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  currentUser = found;
+  localStorage.setItem('crm_session', JSON.stringify(found));
+  initApp();
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function checkSession() {
+  const s = localStorage.getItem('crm_session');
+  if (s) { currentUser = JSON.parse(s); initApp(); }
+}
+
+function initApp() {
+  document.getElementById('login-wrap').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('user-badge').textContent = currentUser.nombre.split(' ')[0];
+  document.getElementById('sidebar-name').textContent = currentUser.nombre;
+  document.getElementById('sidebar-role').textContent = currentUser.rol === 'admin' ? 'Administrador' : 'Vendedor';
+  document.getElementById('sidebar-avatar').textContent = currentUser.nombre.charAt(0).toUpperCase();
+  const adminEls = document.querySelectorAll('.admin-only');
+  adminEls.forEach(el => el.style.display = currentUser.rol === 'admin' ? '' : 'none');
+  cargarClientes();
+  setTimeout(()=>cargarTodasCotizaciones(), 1000);
+  goTo('inicio');
+}
+
+function doLogout() {
+  localStorage.removeItem('crm_session');
+  currentUser = null;
+  document.getElementById('login-wrap').style.display = 'flex';
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// NAVEGACIÓN
+function goTo(screen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  const nav = document.getElementById('nav-' + screen);
+  if (nav) nav.classList.add('active');
+  const titles = {inicio:'Inicio',clientes:'Clientes',formulario:'Nueva visita',reporte:'Reporte de visita',cotizador:'Cotizador',rutas:'Rutas del día',cotizaciones:'Mis cotizaciones',aprobar:'Aprobar cotizaciones',pagos:'Gestión de pagos',dashboard:'Dashboard',mapa:'Mapa de clientes',usuarios:'Gestión de usuarios'};
+  document.getElementById('topbar-title').textContent = titles[screen] || screen;
+  closeSidebar();
+  if (screen === 'inicio') renderHome();
+  if (screen === 'clientes') renderClientes('');
+  if (screen === 'dashboard') cargarDashboard();
+  if (screen === 'mapa') initMapa();
+  if (screen === 'rutas') renderRutas();
+  if (screen === 'cotizador') poblarClientesCotizador();
+  if (screen === 'cotizaciones') cargarMisCotizaciones();
+  if (screen === 'aprobar') cargarCotizacionesPendientes();
+  if (screen === 'pagos') cargarPagos();
+  if (screen === 'usuarios') renderUsuarios();
+  window.scrollTo(0,0);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('show');
+}
+
+// CARGAR CLIENTES
+async function cargarClientes() {
+  try {
+    const url = SHEET_URL.replace('/exec','/exec?action=getClientes');
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.clientes) allClientes = data.clientes;
+  } catch(e) {
+    allClientes = [
+      {nombre:'Cliente prueba',provincia:'Distrito Nacional',tipo:'Persona particular',potencial:'alto',lat:'18.4861',lng:'-69.9312',telefono:'8095555555',contacto:'Juan Pérez',seguimiento:'2026-05-28',tipoArena:'Arena blocks'},
+      {nombre:'Constructora Pérez',provincia:'San Pedro de Macorís',tipo:'Constructor / contratista',potencial:'alto',lat:'18.4583',lng:'-69.3050',telefono:'8095000000',contacto:'Pedro Gómez',seguimiento:'2026-05-28',tipoArena:'Arena blocks | Grava gruesa'}
+    ];
+  }
+  renderHome();
+  renderClientes('');
+}
+
+// HOME
+function renderHome() {
+  const total = allClientes.length;
+  const altos = allClientes.filter(c=>c.potencial==='alto').length;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const semana = new Date(hoy); semana.setDate(semana.getDate()+7);
+  const vencidos = allClientes.filter(c=>{ if(!c.seguimiento) return false; const f=new Date(c.seguimiento); f.setHours(0,0,0,0); return f<=hoy; }).length;
+  const estaSemana = allClientes.filter(c=>{ if(!c.seguimiento) return false; const f=new Date(c.seguimiento); f.setHours(0,0,0,0); return f>hoy&&f<=semana; }).length;
+  document.getElementById('hs-total').textContent = total;
+  document.getElementById('hs-alto').textContent = altos;
+  document.getElementById('hs-semana').textContent = estaSemana;
+  document.getElementById('hs-hoy').textContent = vencidos;
+  const pendientes = allClientes.filter(c=>c.seguimiento).map(c=>({...c,fo:new Date(c.seguimiento)})).filter(c=>{c.fo.setHours(0,0,0,0); return c.fo<=semana;}).sort((a,b)=>a.fo-b.fo).slice(0,5);
+  const seg = document.getElementById('home-seguimientos');
+  if (!pendientes.length) { seg.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin seguimientos pendientes 🎉</div>'; return; }
+  seg.innerHTML = pendientes.map(c=>{
+    const esHoy = c.fo<=hoy;
+    const badge = esHoy ? `<span style="background:var(--red-light);color:var(--red-dark);font-size:11px;padding:3px 8px;border-radius:100px">¡Hoy!</span>` : `<span style="background:var(--amber-light);color:var(--amber-dark);font-size:11px;padding:3px 8px;border-radius:100px">${c.fo.toLocaleDateString('es-DO',{day:'numeric',month:'short'})}</span>`;
+    return `<div class="list-item" onclick="verCliente('${c.nombre.replace(/'/g,"\\'")}')">
+      <div class="list-avatar">${c.nombre.charAt(0).toUpperCase()}</div>
+      <div class="list-info"><div class="list-name">${c.nombre}</div><div class="list-sub">${c.provincia} · ${c.telefono||''}</div></div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+// CLIENTES
+function renderClientes(q) {
+  const lista = document.getElementById('clientes-lista');
+  const filtered = q ? allClientes.filter(c=>c.nombre.toLowerCase().includes(q.toLowerCase())||c.provincia.toLowerCase().includes(q.toLowerCase())) : allClientes;
+  const agrupado = {};
+  filtered.forEach(c=>{ const k=c.nombre.toLowerCase(); if(!agrupado[k]){agrupado[k]={...c,visitas:1};}else{agrupado[k].visitas++;} });
+  const clientes = Object.values(agrupado);
+  if(!clientes.length){lista.innerHTML='<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin resultados</div>';return;}
+  lista.innerHTML='<div class="card">'+clientes.map(c=>{
+    const b=c.potencial==='alto'?'badge-alto':c.potencial==='medio'?'badge-medio':'badge-bajo';
+    const l=c.potencial==='alto'?'🔥 Alto':c.potencial==='medio'?'⚡ Medio':'🌱 Bajo';
+    return `<div class="list-item" onclick="verCliente('${c.nombre.replace(/'/g,"\\'")}')">
+      <div class="list-avatar">${c.nombre.charAt(0).toUpperCase()}</div>
+      <div class="list-info"><div class="list-name">${c.nombre}</div><div class="list-sub">${c.provincia} · ${c.tipo||''}</div></div>
+      <span class="badge ${b}">${l}</span>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+function buscarCliente() { renderClientes(document.getElementById('cliente-search').value); }
+
+function verCliente(nombre) {
+  const visitas = allClientes.filter(c=>c.nombre===nombre);
+  if(!visitas.length) return;
+  const c = visitas[0];
+  const info = `Cliente: ${c.nombre}\nProvincia: ${c.provincia}\nTipo: ${c.tipo}\nContacto: ${c.contacto||'—'}\nTeléfono: ${c.telefono||'—'}\nPotencial: ${c.potencial}\nVisitas registradas: ${visitas.length}\nÚltima arena: ${c.tipoArena||'—'}\nPróximo contacto: ${c.seguimiento||'—'}`;
+  if(confirm('Ver ficha de:\n' + info + '\n\n¿Ir al mapa de este cliente?')) {
+    if(c.lat && c.lng) window.open('https://maps.google.com/?q='+c.lat+','+c.lng,'_blank');
+  }
+}
+
+// FORMULARIO
+function captureGeo(prefix) {
+  const btn = document.getElementById(prefix+'-geo-btn');
+  const text = document.getElementById(prefix+'-geo-text');
+  const coords = document.getElementById(prefix+'-geo-coords');
+  text.textContent = 'Obteniendo...';
+  if(!navigator.geolocation){text.textContent='GPS no disponible';return;}
+  navigator.geolocation.getCurrentPosition(pos=>{
+    geoLat[prefix] = pos.coords.latitude.toFixed(6);
+    geoLng[prefix] = pos.coords.longitude.toFixed(6);
+    text.textContent = 'GPS capturado ✓';
+    coords.textContent = geoLat[prefix]+', '+geoLng[prefix];
+  },()=>{text.textContent='No se pudo obtener';},{ enableHighAccuracy:true,timeout:10000 });
+}
+
+function toggleArena(el, prefix) {
+  const val = el.dataset.val;
+  if(el.classList.contains('on')){el.classList.remove('on');selectedArenas[prefix]=selectedArenas[prefix].filter(v=>v!==val);}
+  else{el.classList.add('on');selectedArenas[prefix].push(val);}
+}
+
+function selectChip(groupId, value, colorClass) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.chip').forEach(c=>{c.className='chip';c.removeAttribute('data-sel');});
+  group.querySelectorAll('.chip').forEach(c=>{
+    if(c.getAttribute('onclick')&&c.getAttribute('onclick').includes("'"+value+"'")){
+      c.className='chip '+colorClass;c.setAttribute('data-sel',value);
+    }
+  });
+}
+
+function getChip(groupId) {
+  const group = document.getElementById(groupId);
+  const sel = [...group.querySelectorAll('.chip')].find(c=>c.getAttribute('data-sel'));
+  return sel ? sel.getAttribute('data-sel') : '';
+}
+
+async function guardarVisita() {
+  const nombre = document.getElementById('f-nombre').value.trim();
+  if(!nombre){showToast('El nombre es obligatorio',true);return;}
+  const btn = document.getElementById('f-submit-btn');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Guardando...';
+  const data = {
+    fecha:new Date().toLocaleString('es-DO'),vendedor:currentUser.nombre,nombre,
+    contacto:document.getElementById('f-contacto').value,telefono:document.getElementById('f-telefono').value,
+    whatsapp:document.getElementById('f-whatsapp').value,direccion:document.getElementById('f-direccion').value,
+    provincia:document.getElementById('f-provincia').value,lat:geoLat.f||'',lng:geoLng.f||'',
+    tipo:document.getElementById('f-tipo').value,tipoArena:selectedArenas.f.join(' | '),
+    volumen:document.getElementById('f-volumen').value,proveedor:document.getElementById('f-proveedor').value,
+    potencial:getChip('f-potencial'),notas:document.getElementById('f-notas').value,
+    seguimiento:document.getElementById('f-seguimiento').value
+  };
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('✓ Visita guardada');
+    await cargarClientes();
+    ['f-nombre','f-contacto','f-telefono','f-whatsapp','f-direccion','f-volumen','f-notas','f-seguimiento'].forEach(id=>document.getElementById(id).value='');
+    ['f-provincia','f-tipo','f-proveedor'].forEach(id=>document.getElementById(id).selectedIndex=0);
+    selectedArenas.f=[];
+    document.querySelectorAll('#f-arenas .arena-chip').forEach(c=>c.classList.remove('on'));
+    geoLat.f=null;geoLng.f=null;
+    document.getElementById('f-geo-text').textContent='Capturar GPS';
+    document.getElementById('f-geo-coords').textContent='';
+    document.querySelectorAll('#f-potencial .chip').forEach(c=>{c.className='chip';c.removeAttribute('data-sel');});
+  } catch(e) { showToast('Error guardando',true); }
+  btn.disabled=false;btn.innerHTML='💾 Guardar visita';
+}
+
+// REPORTE
+function buscarClienteReporte() {
+  const q = document.getElementById('rep-cliente-search').value.trim().toLowerCase();
+  const lista = document.getElementById('rep-search-lista');
+  const found = document.getElementById('rep-cliente-found');
+  if(!q){lista.innerHTML='';found.style.display='none';repClienteSeleccionado=null;return;}
+  const agrupado={};
+  allClientes.forEach(c=>{const k=c.nombre.toLowerCase();if(!agrupado[k])agrupado[k]=c;});
+  const matches = Object.values(agrupado).filter(c=>c.nombre.toLowerCase().includes(q));
+  if(!matches.length){lista.innerHTML='';return;}
+  lista.innerHTML='<div class="card" style="margin-top:6px">'+matches.slice(0,4).map(c=>
+    `<div class="list-item" onclick="selClienteReporte('${c.nombre.replace(/'/g,"\\'")}')">
+      <div class="list-info"><div class="list-name">${c.nombre}</div><div class="list-sub">${c.provincia}</div></div>
+    </div>`).join('')+'</div>';
+}
+
+function selClienteReporte(nombre) {
+  const agrupado={};allClientes.forEach(c=>{const k=c.nombre.toLowerCase();if(!agrupado[k])agrupado[k]=c;});
+  repClienteSeleccionado = Object.values(agrupado).find(c=>c.nombre===nombre);
+  if(!repClienteSeleccionado) return;
+  document.getElementById('rep-cliente-search').value = nombre;
+  document.getElementById('rep-search-lista').innerHTML='';
+  document.getElementById('rep-cliente-nombre').textContent = nombre;
+  document.getElementById('rep-cliente-sub').textContent = repClienteSeleccionado.provincia+' · '+repClienteSeleccionado.contacto;
+  document.getElementById('rep-cliente-found').style.display='block';
+}
+
+function repNuevoCliente() {
+  const nombre = document.getElementById('rep-cliente-search').value.trim();
+  if(!nombre){showToast('Escribe el nombre primero',true);return;}
+  repClienteSeleccionado = {nombre,provincia:'',tipo:'',contacto:'',telefono:''};
+  document.getElementById('rep-cliente-nombre').textContent=nombre;
+  document.getElementById('rep-cliente-sub').textContent='Cliente nuevo';
+  document.getElementById('rep-cliente-found').style.display='block';
+  document.getElementById('rep-search-lista').innerHTML='';
+}
+
+function repIrPaso(n) {
+  if(n===2&&!repClienteSeleccionado){showToast('Selecciona un cliente primero',true);return;}
+  for(let i=1;i<=4;i++){
+    document.getElementById('rstep-'+i).className='step'+(i===n?' active':'');
+    const ps=document.getElementById('rps-'+i);
+    ps.className='ps'+(i<n?' done':i===n?' active':'');
+  }
+  window.scrollTo(0,0);
+}
+
+async function generarReporteIA() {
+  const btn = document.getElementById('btn-gen-ia');
+  const box = document.getElementById('rep-ai-box');
+  const content = document.getElementById('rep-ai-content');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Analizando...';
+  box.style.display='block';content.textContent='Generando resumen...';
+  const c = repClienteSeleccionado;
+  const prompt = `Eres un asistente de ventas para una empresa de arena en República Dominicana. 
+Analiza esta visita y genera un reporte ejecutivo en español (máximo 120 palabras).
+Cliente: ${c?.nombre||''} (${c?.tipo||''}) — ${c?.provincia||''}
+Vendedor: ${currentUser.nombre}
+Tipo contacto: ${getChip('rc-tipo')} | Con quién: ${getChip('rc-quien')} | Actitud: ${getChip('rc-actitud')}
+Productos: ${selectedArenas.rc.join(', ')||'no especificado'} | Volumen: ${document.getElementById('rc-volumen').value}
+Cotización: ${getChip('rc-cotizacion')} | Objeción: ${getChip('rc-objecion')}
+Probabilidad: ${getChip('rc-prob')} | Próximo paso: ${getChip('rc-paso')}
+Notas: ${document.getElementById('rc-notas').value}
+Genera: 📋 RESUMEN, 🎯 OPORTUNIDAD, ⚠️ ATENCIÓN, ✅ PRÓXIMOS PASOS`;
+  try {
+    const res = await fetch(GEMINI_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})});
+    const data = await res.json();
+    repResumenIA = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Resumen no disponible.';
+    content.textContent = repResumenIA;
+    document.getElementById('btn-guardar-rep').style.display='block';
+  } catch(e) {
+    repResumenIA = 'Resumen no disponible.';
+    content.textContent = repResumenIA;
+    document.getElementById('btn-guardar-rep').style.display='block';
+  }
+  btn.disabled=false;btn.innerHTML='✨ Regenerar resumen';
+}
+
+async function guardarReporte() {
+  const btn = document.getElementById('btn-guardar-rep');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Guardando...';
+  const reporte = {
+    action:'saveReporte',fecha:new Date().toLocaleString('es-DO'),vendedor:currentUser.nombre,
+    cliente:repClienteSeleccionado?.nombre||'',provincia:repClienteSeleccionado?.provincia||'',
+    tipo:repClienteSeleccionado?.tipo||'',contacto:repClienteSeleccionado?.contacto||'',
+    tipoContacto:getChip('rc-tipo'),quien:getChip('rc-quien'),actitud:getChip('rc-actitud'),
+    productos:selectedArenas.rc.join(' | '),volumen:document.getElementById('rc-volumen').value,
+    cotizacion:getChip('rc-cotizacion'),objecion:getChip('rc-objecion'),
+    probabilidad:getChip('rc-prob'),proximoPaso:getChip('rc-paso'),
+    fechaProximo:document.getElementById('rc-fecha').value,apoyo:getChip('rc-apoyo'),
+    notas:document.getElementById('rc-notas').value,resumenIA:repResumenIA
+  };
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(reporte)});
+    showToast('✓ Reporte guardado — PDF generado en Drive');
+    resetReporte();
+    goTo('inicio');
+  } catch(e){showToast('Error guardando',true);}
+  btn.disabled=false;btn.innerHTML='💾 Guardar reporte';
+}
+
+function resetReporte() {
+  repClienteSeleccionado=null;repResumenIA='';selectedArenas.rc=[];
+  document.getElementById('rep-cliente-search').value='';
+  document.getElementById('rep-cliente-found').style.display='none';
+  document.getElementById('rep-search-lista').innerHTML='';
+  document.getElementById('rc-volumen').value='';
+  document.getElementById('rc-fecha').value='';
+  document.getElementById('rc-notas').value='';
+  document.getElementById('rep-ai-box').style.display='none';
+  document.getElementById('rep-ai-content').textContent='';
+  document.getElementById('btn-guardar-rep').style.display='none';
+  document.getElementById('btn-gen-ia').innerHTML='✨ Generar resumen con IA';
+  document.querySelectorAll('#screen-reporte .chip').forEach(c=>{c.className='chip';c.removeAttribute('data-sel');});
+  document.querySelectorAll('#rc-arenas .arena-chip').forEach(c=>c.classList.remove('on'));
+  repIrPaso(1);
+}
+
+// COTIZADOR
+const PRECIOS = {'Arena lavada':1200,'Arena blocks':1000,'Arena de pañete':1000,'Arena zarandeada':800};
+const FLETE = 14;
+let cotKmCalculado = null;
+let cotClienteGPS = null;
+
+function selClienteCotizador() {
+  const sel = document.getElementById('cot-cliente-select');
+  const val = sel.value;
+  if(!val) return;
+  const parts = val.split('|');
+  document.getElementById('cot-cliente').value = parts[0];
+  if(parts[1] && parts[2]) {
+    cotClienteGPS = {lat: parseFloat(parts[1]), lng: parseFloat(parts[2])};
+    calcDistanciaGPS();
+  }
+}
+
+async function calcDistanciaGPS() {
+  const cantera = document.getElementById('cot-cantera').value;
+  if(!cantera) { showToast('Selecciona la cantera primero', true); return; }
+  const [oLat, oLng] = cantera.split(',').map(Number);
+  const display = document.getElementById('cot-km-display');
+
+  let destLat, destLng;
+
+  if(cotClienteGPS) {
+    destLat = cotClienteGPS.lat;
+    destLng = cotClienteGPS.lng;
+  } else {
+    // Usar ubicación actual del vendedor
+    if(!navigator.geolocation) { showToast('GPS no disponible', true); return; }
+    display.textContent = 'Obteniendo tu ubicación...';
+    try {
+      const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, {enableHighAccuracy:true,timeout:10000}));
+      destLat = pos.coords.latitude;
+      destLng = pos.coords.longitude;
+    } catch(e) { showToast('No se pudo obtener GPS', true); return; }
+  }
+
+  // Calcular distancia real por carretera usando OSRM (gratis)
+  display.textContent = '🛣️ Calculando ruta real...';
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${oLng},${oLat};${destLng},${destLat}?overview=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.code === 'Ok' && data.routes && data.routes[0]) {
+      const kmReales = Math.round(data.routes[0].distance / 100) / 10;
+      const minutos = Math.round(data.routes[0].duration / 60);
+      const horas = minutos >= 60 ? Math.floor(minutos/60) + 'h ' + (minutos%60) + 'min' : minutos + ' min';
+      cotKmCalculado = kmReales;
+      document.getElementById('cot-km').value = kmReales;
+      display.textContent = `✓ ${kmReales} km por carretera · ${horas} de viaje`;
+      display.style.color = 'var(--green-dark)';
+      calcCotizacion();
+      showToast('Distancia real: ' + kmReales + ' km');
+    } else {
+      throw new Error('Sin ruta');
+    }
+  } catch(e) {
+    // Fallback a distancia en línea recta si OSRM falla
+    const kmLinea = Math.round(dist(oLat, oLng, destLat, destLng) * 10) / 10;
+    cotKmCalculado = kmLinea;
+    document.getElementById('cot-km').value = kmLinea;
+    display.textContent = `⚠️ ${kmLinea} km aprox. (línea recta — edita si es necesario)`;
+    display.style.color = 'var(--amber-dark)';
+    calcCotizacion();
+    showToast('Distancia aproximada: ' + kmLinea + ' km', true);
+  }
+}
+
+function calcCotizacion() {
+  const precioStr = document.getElementById('cot-arena').value;
+  const vol = parseFloat(document.getElementById('cot-vol').value)||0;
+  const km = parseFloat(document.getElementById('cot-km').value)||0;
+  const result = document.getElementById('cot-result');
+  const pdfBtn = document.getElementById('cot-pdf-btn');
+  if(!precioStr||!vol){result.style.display='none';pdfBtn.style.display='none';return;}
+  const precio = parseFloat(precioStr);
+  const subtArena = precio * vol;
+  const subtFlete = FLETE * vol * km;
+  const total = subtArena + subtFlete;
+  const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+  document.getElementById('cot-subtotal-arena').textContent = fmt(subtArena);
+  document.getElementById('cot-subtotal-flete').textContent = fmt(subtFlete);
+  document.getElementById('cot-km-resultado').textContent = km + ' km × ' + vol + ' m³ × RD$14';
+  document.getElementById('cot-total').textContent = fmt(total);
+  result.style.display='block';pdfBtn.style.display='block';
+}
+
+function copiarCotizacion() {
+  const cliente = document.getElementById('cot-cliente').value||'Cliente';
+  const arena = document.getElementById('cot-arena').options[document.getElementById('cot-arena').selectedIndex]?.text||'';
+  const vol = document.getElementById('cot-vol').value;
+  const km = document.getElementById('cot-km').value;
+  const total = document.getElementById('cot-total').textContent;
+  if(!total||total==='—'){showToast('Llena los datos primero',true);return;}
+  const msg = `Estimado ${cliente},\n\nLe presentamos nuestra cotización:\n\n📦 Producto: ${arena.split(' —')[0]}\n📐 Volumen: ${vol} m³\n🚛 Distancia: ${km} km\n\n💰 Total estimado: ${total}\n\n*Precio incluye flete. Válido por 7 días.*\n\nArena Faleria Comercial\n📞 Contáctenos para coordinar entrega.`;
+  if(navigator.clipboard){navigator.clipboard.writeText(msg).then(()=>showToast('✓ Copiado — pega en WhatsApp'));}
+  else{showToast('Copia el mensaje manualmente',true);}
+}
+
+async function generarCotPDF() {
+  const cliente = document.getElementById('cot-cliente').value.trim();
+  if(!cliente){showToast('Escribe el nombre del cliente',true);return;}
+  const arenaEl = document.getElementById('cot-arena');
+  const arena = arenaEl.options[arenaEl.selectedIndex]?.text||'';
+  if(!arena){showToast('Selecciona el tipo de arena',true);return;}
+  const vol = document.getElementById('cot-vol').value;
+  const km = document.getElementById('cot-km').value;
+  if(!vol||!km){showToast('Completa volumen y distancia',true);return;}
+  const subtArena = document.getElementById('cot-subtotal-arena').textContent;
+  const subtFlete = document.getElementById('cot-subtotal-flete').textContent;
+  const total = document.getElementById('cot-total').textContent;
+  const totalNum = parseFloat(vol)*(parseFloat(arenaEl.value)+14*parseFloat(km));
+  const btn = document.getElementById('cot-pdf-btn');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Guardando...';
+  // Get client contact data if available
+  const clienteData = allClientes.find(c=>c.nombre===cliente) || {};
+  const data = {
+    action:'saveCotizacion',
+    fecha:new Date().toLocaleString('es-DO'),
+    vendedor:currentUser.nombre,
+    telefonoVendedor:currentUser.telefono||'',
+    cliente,
+    contactoCliente: clienteData.contacto||'',
+    telefonoCliente: clienteData.telefono||'',
+    provinciaCliente: clienteData.provincia||'',
+    arena:arena.split(' —')[0],
+    volumen:vol,
+    distancia:km,
+    precioUnitario:arenaEl.value,
+    subtArena,subtFlete,total,
+    totalNum:Math.round(totalNum),
+    estado:'pendiente',
+    notas:''
+  };
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('✓ Cotización enviada al administrador para aprobación');
+    btn.innerHTML='✅ Enviada para aprobación';
+    setTimeout(()=>{
+      btn.disabled=false;btn.innerHTML='📄 Guardar cotización';
+    },3000);
+  } catch(e){showToast('Error guardando',true);btn.disabled=false;btn.innerHTML='📄 Guardar cotización';}
+}
+
+// RUTAS
+function poblarClientesCotizador() {
+  const sel = document.getElementById('cot-cliente-select');
+  sel.innerHTML = '<option value="">Seleccionar cliente...</option>';
+  const agrupado = {};
+  allClientes.forEach(c => { const k = c.nombre.toLowerCase(); if(!agrupado[k]) agrupado[k] = c; });
+  Object.values(agrupado).forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.nombre + '|' + (c.lat||'') + '|' + (c.lng||'');
+    opt.textContent = c.nombre + (c.lat ? ' 📍' : '');
+    sel.appendChild(opt);
+  });
+}
+
+function setOrigen(nombre, coords) {
+  rutaOrigen=nombre; rutaOrigenCoords=coords;
+  ['sd','se','hm','hi'].forEach(z=>document.getElementById('zona-'+z).className='chip');
+  const map={'Santo Domingo':'sd','El Seibo':'se','Hato Mayor':'hm','Higüey':'hi'};
+  document.getElementById('zona-'+map[nombre]).className='chip on-green';
+  renderRutas();
+  showToast('Salida desde '+nombre);
+}
+
+function renderRutas() {
+  const lista = document.getElementById('rutas-lista');
+  if(!allClientes.length){lista.innerHTML='<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Sin clientes con GPS</div>';return;}
+  const conGPS = allClientes.filter(c=>c.lat&&c.lng);
+  const agrupado={};conGPS.forEach(c=>{const k=c.nombre.toLowerCase();if(!agrupado[k])agrupado[k]=c;});
+  let clientes = Object.values(agrupado);
+  if(rutaOrigenCoords){
+    const [oLat,oLng]=rutaOrigenCoords.split(',').map(Number);
+    clientes.sort((a,b)=>dist(oLat,oLng,+a.lat,+a.lng)-dist(oLat,oLng,+b.lat,+b.lng));
+  }
+  rutaClientesOrdenados=clientes;
+  lista.innerHTML=clientes.map((c,i)=>{
+    const b=c.potencial==='alto'?'badge-alto':c.potencial==='medio'?'badge-medio':'badge-bajo';
+    const l=c.potencial==='alto'?'🔥 Alto':c.potencial==='medio'?'⚡ Medio':'🌱 Bajo';
+    const sel=rutaSeleccionados.has(i);
+    const km=rutaOrigenCoords?Math.round(dist(...rutaOrigenCoords.split(',').map(Number),+c.lat,+c.lng))+'km':'';
+    return `<div class="list-item" onclick="toggleRuta(${i})" id="ruta-item-${i}">
+      <div style="width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${sel?'var(--green)':'var(--bg)'};transition:all 0.12s">${sel?'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+      <div class="list-info"><div class="list-name">${c.nombre}</div><div class="list-sub">${c.provincia}${km?' · '+km:''}</div></div>
+      <span class="badge ${b}">${l}</span>
+    </div>`;
+  }).join('');
+  renderRutaResult();
+}
+
+function toggleRuta(i) {
+  if(rutaSeleccionados.has(i))rutaSeleccionados.delete(i);
+  else rutaSeleccionados.add(i);
+  renderRutas();
+}
+
+function renderRutaResult() {
+  const result = document.getElementById('ruta-result');
+  const lista = document.getElementById('ruta-ordenada');
+  if(!rutaSeleccionados.size){result.style.display='none';return;}
+  result.style.display='block';
+  const sel=[...rutaSeleccionados].map(i=>rutaClientesOrdenados[i]);
+  lista.innerHTML=sel.map((c,i)=>`<div class="list-item">
+    <div style="width:24px;height:24px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:#fff;flex-shrink:0">${i+1}</div>
+    <div class="list-info"><div class="list-name">${c.nombre}</div><div class="list-sub">${c.provincia} · ${c.telefono||''}</div></div>
+    <a href="https://maps.google.com/?q=${c.lat},${c.lng}" target="_blank" class="btn-small">Ver</a>
+  </div>`).join('');
+}
+
+function abrirRutaMaps() {
+  const sel=[...rutaSeleccionados].map(i=>rutaClientesOrdenados[i]);
+  let url='https://www.google.com/maps/dir/';
+  if(rutaOrigenCoords)url+=rutaOrigenCoords+'/';
+  sel.forEach(c=>{url+=c.lat+','+c.lng+'/';});
+  window.open(url,'_blank');
+}
+
+function limpiarRuta(){rutaSeleccionados.clear();renderRutas();}
+
+function dist(lat1,lng1,lat2,lng2){
+  const R=6371,dL=(lat2-lat1)*Math.PI/180,dN=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dN/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// DASHBOARD
+function cargarDashboard() {
+  cargarVentasDashboard();
+  const c = allClientes;
+  const total=c.length,altos=c.filter(x=>x.potencial==='alto').length,medios=c.filter(x=>x.potencial==='medio').length,bajos=c.filter(x=>x.potencial==='bajo').length;
+  const hoy=new Date();hoy.setHours(0,0,0,0);const semana=new Date(hoy);semana.setDate(semana.getDate()+7);
+  const vencidos=c.filter(x=>{if(!x.seguimiento)return false;const f=new Date(x.seguimiento);f.setHours(0,0,0,0);return f<=hoy;}).length;
+  document.getElementById('dash-stats').innerHTML=`
+    <div class="stat s-blue"><div class="stat-num">${total}</div><div class="stat-label">Total clientes</div></div>
+    <div class="stat s-green"><div class="stat-num">${altos}</div><div class="stat-label">🔥 Potencial alto</div></div>
+    <div class="stat s-amber"><div class="stat-num">${medios}</div><div class="stat-label">⚡ Potencial medio</div></div>
+    <div class="stat s-red"><div class="stat-num">${vencidos}</div><div class="stat-label">🚨 Vencidos</div></div>`;
+  const provMap={};c.forEach(x=>{provMap[x.provincia]=(provMap[x.provincia]||0)+1;});
+  const provs=Object.entries(provMap).sort((a,b)=>b[1]-a[1]);
+  const maxP=provs[0]?.[1]||1;
+  document.getElementById('dash-provincias').innerHTML='<div class="card-header">Por provincia</div>'+provs.map(([p,n])=>`<div style="padding:10px 16px;border-bottom:0.5px solid var(--border)"><div class="bar-row"><span class="bar-label">${p}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxP*100)}%"></div></div><span class="bar-num">${n}</span></div></div>`).join('');
+  document.getElementById('dash-potencial').innerHTML=`<div style="padding:12px 16px;border-bottom:0.5px solid var(--border)"><div class="bar-row"><span class="bar-label">🔥 Alto</span><div class="bar-track"><div class="bar-fill" style="width:${total?Math.round(altos/total*100):0}%;background:var(--green)"></div></div><span class="bar-num">${altos}</span></div></div><div style="padding:12px 16px;border-bottom:0.5px solid var(--border)"><div class="bar-row"><span class="bar-label">⚡ Medio</span><div class="bar-track"><div class="bar-fill" style="width:${total?Math.round(medios/total*100):0}%;background:var(--amber-border)"></div></div><span class="bar-num">${medios}</span></div></div><div style="padding:12px 16px"><div class="bar-row"><span class="bar-label">🌱 Bajo</span><div class="bar-track"><div class="bar-fill" style="width:${total?Math.round(bajos/total*100):0}%;background:var(--red-border)"></div></div><span class="bar-num">${bajos}</span></div></div>`;
+  const arenaMap={};c.forEach(x=>{if(!x.tipoArena)return;x.tipoArena.split('|').forEach(a=>{const v=a.trim();if(v)arenaMap[v]=(arenaMap[v]||0)+1;});});
+  const arenas=Object.entries(arenaMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxA=arenas[0]?.[1]||1;
+  document.getElementById('dash-arenas').innerHTML='<div class="card-header">Arenas más solicitadas</div>'+arenas.map(([a,n])=>`<div style="padding:10px 16px;border-bottom:0.5px solid var(--border)"><div class="bar-row"><span class="bar-label">${a}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxA*100)}%"></div></div><span class="bar-num">${n}</span></div></div>`).join('');
+  const pendientes=c.filter(x=>x.seguimiento).map(x=>({...x,fo:new Date(x.seguimiento)})).filter(x=>{x.fo.setHours(0,0,0,0);return x.fo<=semana;}).sort((a,b)=>a.fo-b.fo);
+  document.getElementById('dash-seguimientos').innerHTML=pendientes.length?pendientes.map(x=>{
+    const esHoy=x.fo<=hoy;
+    return `<div class="list-item"><div class="list-avatar">${x.nombre.charAt(0)}</div><div class="list-info"><div class="list-name">${x.nombre}</div><div class="list-sub">${x.provincia} · ${x.telefono||''}</div></div><span style="font-size:11px;padding:3px 8px;border-radius:100px;background:${esHoy?'var(--red-light)':'var(--amber-light)'};color:${esHoy?'var(--red-dark)':'var(--amber-dark)'}">${esHoy?'¡Hoy!':x.fo.toLocaleDateString('es-DO',{day:'numeric',month:'short'})}</span></div>`;
+  }).join(''):'<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin seguimientos pendientes 🎉</div>';
+}
+
+// MAPA
+function initMapa() {
+  if(mapaInstance){mapaInstance.invalidateSize();renderMapaMarkers(allClientes);return;}
+  setTimeout(()=>{
+    mapaInstance = L.map('map').setView([18.7357,-69.0633],8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap'}).addTo(mapaInstance);
+    mapaAllClientes = allClientes;
+    renderMapaMarkers(allClientes);
+  },100);
+}
+
+function renderMapaMarkers(clientes) {
+  mapaMarkers.forEach(m=>m.remove());mapaMarkers=[];
+  const agrupado={};clientes.forEach(c=>{const k=c.nombre.toLowerCase();if(!agrupado[k])agrupado[k]=c;});
+  Object.values(agrupado).forEach(c=>{
+    if(!c.lat||!c.lng)return;
+    const color=c.potencial==='alto'?'#1D9E75':c.potencial==='medio'?'#EF9F27':'#F0997B';
+    const icon=L.divIcon({html:`<div style="width:12px;height:12px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>`,iconSize:[12,12],className:''});
+    const marker=L.marker([+c.lat,+c.lng],{icon}).addTo(mapaInstance);
+    const b=c.potencial==='alto'?'🔥 Alto':c.potencial==='medio'?'⚡ Medio':'🌱 Bajo';
+    marker.bindPopup(`<div class="popup-nombre">${c.nombre}</div><div class="popup-sub">${c.provincia} · ${c.tipo||''}</div><div class="popup-sub">${b}</div><div class="popup-actions"><button class="popup-btn" onclick="window.open('https://maps.google.com/?q=${c.lat},${c.lng}','_blank')">📍 Maps</button><button class="popup-btn" onclick="window.open('tel:${c.telefono||''}')">📞 Llamar</button></div>`);
+    mapaMarkers.push(marker);
+  });
+}
+
+function filtrarMapa(zona) {
+  document.querySelectorAll('#mapa-filtros .chip').forEach(c=>c.className='chip');
+  event.target.className='chip on-green';
+  const filtered=zona==='todos'?mapaAllClientes:mapaAllClientes.filter(c=>c.provincia===zona);
+  renderMapaMarkers(filtered);
+}
+
+// USUARIOS
+function renderUsuarios() {
+  const users = getUsers();
+  document.getElementById('users-list').innerHTML=users.map((u,i)=>`<div class="user-item">
+    <div class="list-avatar">${u.nombre.charAt(0)}</div>
+    <div class="list-info"><div class="list-name">${u.nombre}</div><div class="list-sub">${u.user}</div></div>
+    <span class="user-role-badge ${u.rol==='admin'?'role-admin':'role-vendedor'}">${u.rol==='admin'?'Admin':'Vendedor'}</span>
+    ${i>1?`<button onclick="eliminarUsuario(${i})" style="background:var(--red-light);border:0.5px solid var(--red-border);border-radius:var(--rsm);padding:4px 8px;font-size:12px;color:var(--red-dark);cursor:pointer;font-family:inherit;margin-left:6px">✕</button>`:''}
+  </div>`).join('');
+}
+
+function agregarUsuario() {
+  const nombre=document.getElementById('new-nombre').value.trim();
+  const user=document.getElementById('new-user').value.trim().toLowerCase();
+  const pass=document.getElementById('new-pass').value;
+  const rol=document.getElementById('new-rol').value;
+  const telefono=document.getElementById('new-telefono').value.trim();
+  if(!nombre||!user||!pass){showToast('Completa todos los campos',true);return;}
+  const users=getUsers();
+  if(users.find(u=>u.user===user)){showToast('Ese usuario ya existe',true);return;}
+  users.push({nombre,user,pass,rol,telefono});
+  saveUsers(users);
+  showToast('✓ Usuario '+nombre+' agregado');
+  ['new-nombre','new-user','new-pass','new-telefono'].forEach(id=>document.getElementById(id).value='');
+  renderUsuarios();
+}
+
+function eliminarUsuario(i) {
+  if(!confirm('¿Eliminar este usuario?'))return;
+  const users=getUsers();users.splice(i,1);saveUsers(users);renderUsuarios();showToast('Usuario eliminado');
+}
+
+// VENTAS
+function calcVenta() {
+  const precioStr = document.getElementById('v-arena').value;
+  const vol = parseFloat(document.getElementById('v-vol').value)||0;
+  const km = parseFloat(document.getElementById('v-km').value)||0;
+  const result = document.getElementById('v-result');
+  if(!precioStr||!vol){result.style.display='none';return;}
+  const precio = parseFloat(precioStr);
+  const subtArena = precio * vol;
+  const subtFlete = 14 * vol * km;
+  const total = subtArena + subtFlete;
+  const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+  document.getElementById('v-sub-arena').textContent = fmt(subtArena);
+  document.getElementById('v-sub-flete').textContent = fmt(subtFlete);
+  document.getElementById('v-total').textContent = fmt(total);
+  result.style.display='block';
+}
+
+async function guardarVenta() {
+  const cliente = document.getElementById('v-cliente').value.trim();
+  if(!cliente){showToast('El cliente es obligatorio',true);return;}
+  const precioStr = document.getElementById('v-arena').value;
+  const vol = parseFloat(document.getElementById('v-vol').value)||0;
+  if(!precioStr||!vol){showToast('Selecciona producto y volumen',true);return;}
+  const btn = document.getElementById('v-submit-btn');
+  btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Guardando...';
+  const km = parseFloat(document.getElementById('v-km').value)||0;
+  const precio = parseFloat(precioStr);
+  const subtArena = precio * vol;
+  const subtFlete = 14 * vol * km;
+  const total = subtArena + subtFlete;
+  const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+  const arenaText = document.getElementById('v-arena').options[document.getElementById('v-arena').selectedIndex]?.text||'';
+  const data = {
+    action:'saveVenta',
+    fecha:new Date().toLocaleString('es-DO'),
+    vendedor:currentUser.nombre,
+    cliente,
+    arena:arenaText.split(' —')[0],
+    volumen:vol,
+    distancia:km,
+    precioUnitario:precio,
+    subtArena:fmt(subtArena),
+    subtFlete:fmt(subtFlete),
+    total:fmt(total),
+    totalNum:Math.round(total),
+    fechaEntrega:document.getElementById('v-fecha').value,
+    notas:document.getElementById('v-notas').value
+  };
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('✓ Venta de '+fmt(total)+' registrada');
+    ['v-cliente','v-vol','v-km','v-notas','v-fecha'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('v-arena').selectedIndex=0;
+    document.getElementById('v-result').style.display='none';
+    cargarVentasDashboard();
+  } catch(e){showToast('Error guardando venta',true);}
+  btn.disabled=false;btn.innerHTML='✅ Confirmar venta';
+}
+
+async function cargarVentasDashboard() {
+  try {
+    const url = SHEET_URL.replace('/exec','/exec?action=getVentas');
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.ventas) renderVentasDash(data.ventas);
+  } catch(e) {}
+}
+
+function renderVentasDash(ventas) {
+  const hoy = new Date();
+  const mesActual = hoy.getMonth();
+  const anioActual = hoy.getFullYear();
+  const ventasMes = ventas.filter(v => {
+    if(!v.fecha) return false;
+    const f = new Date(v.fecha);
+    return f.getMonth()===mesActual && f.getFullYear()===anioActual;
+  });
+  const totalMes = ventasMes.reduce((sum,v)=>sum+(v.totalNum||0),0);
+  const totalGeneral = ventas.reduce((sum,v)=>sum+(v.totalNum||0),0);
+  const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+
+  // Por vendedor
+  const porVendedor = {};
+  ventas.forEach(v=>{porVendedor[v.vendedor]=(porVendedor[v.vendedor]||0)+(v.totalNum||0);});
+  const vendedores = Object.entries(porVendedor).sort((a,b)=>b[1]-a[1]);
+  const maxV = vendedores[0]?.[1]||1;
+
+  // Por producto
+  const porProducto = {};
+  ventas.forEach(v=>{porProducto[v.arena]=(porProducto[v.arena]||0)+(v.totalNum||0);});
+  const productos = Object.entries(porProducto).sort((a,b)=>b[1]-a[1]);
+  const maxP = productos[0]?.[1]||1;
+
+  const dashVentas = document.getElementById('dash-ventas');
+  if(!dashVentas) return;
+  dashVentas.innerHTML = `
+    <div class="stats-grid" style="margin-bottom:16px">
+      <div class="stat s-green"><div class="stat-num" style="font-size:18px">${fmt(totalMes)}</div><div class="stat-label">Vendido este mes</div></div>
+      <div class="stat s-blue"><div class="stat-num" style="font-size:18px">${fmt(totalGeneral)}</div><div class="stat-label">Total histórico</div></div>
+    </div>
+    <div class="sec-label">Por vendedor</div>
+    <div class="card" style="margin-bottom:12px">
+      ${vendedores.map(([v,n])=>`<div style="padding:10px 16px;border-bottom:0.5px solid var(--border)"><div class="bar-row"><span class="bar-label">${v}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxV*100)}%;background:var(--green)"></div></div><span class="bar-num" style="font-size:12px">${fmt(n)}</span></div></div>`).join('') || '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Sin ventas aún</div>'}
+    </div>
+    <div class="sec-label">Por producto</div>
+    <div class="card">
+      ${productos.map(([p,n])=>`<div style="padding:10px 16px;border-bottom:0.5px solid var(--border)"><div class="bar-row"><span class="bar-label">${p}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/maxP*100)}%"></div></div><span class="bar-num" style="font-size:12px">${fmt(n)}</span></div></div>`).join('') || '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px">Sin ventas aún</div>'}
+    </div>`;
+}
+
+// COTIZACIONES
+let todasCotizaciones = [];
+
+async function cargarTodasCotizaciones() {
+  try {
+    const url = SHEET_URL.replace('/exec','/exec?action=getCotizaciones');
+    const res = await fetch(url);
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if(data && data.cotizaciones) {
+      todasCotizaciones = data.cotizaciones;
+      actualizarBadges();
+    }
+  } catch(e) {
+    console.log('Cotizaciones no disponibles:', e);
+  }
+}
+
+function actualizarBadges() {
+  const pendientes = todasCotizaciones.filter(c=>c.estado==='pendiente').length;
+  const badge = document.getElementById('aprobar-badge');
+  if(badge){badge.textContent=pendientes;badge.style.display=pendientes?'':'none';}
+  const misCot = todasCotizaciones.filter(c=>c.vendedor===currentUser.nombre&&c.estado==='aprobada').length;
+  const cotBadge = document.getElementById('cot-badge');
+  if(cotBadge){cotBadge.textContent=misCot;cotBadge.style.display=misCot?'':'none';}
+}
+
+function cargarMisCotizaciones() {
+  cargarTodasCotizaciones().then(()=>{
+    const mias = todasCotizaciones.filter(c=>c.vendedor===currentUser.nombre);
+    const pendientes = mias.filter(c=>c.estado==='pendiente').length;
+    const aprobadas = mias.filter(c=>c.estado==='aprobada').length;
+    const rechazadas = mias.filter(c=>c.estado==='rechazada').length;
+    const cerradas = mias.filter(c=>c.estado==='cerrada').length;
+    document.getElementById('mis-cot-stats').innerHTML=`
+      <div class="stat s-amber"><div class="stat-num">${pendientes}</div><div class="stat-label">Pendientes</div></div>
+      <div class="stat s-green"><div class="stat-num">${aprobadas}</div><div class="stat-label">Aprobadas</div></div>
+      <div class="stat s-blue"><div class="stat-num">${cerradas}</div><div class="stat-label">Cerradas</div></div>
+      <div class="stat s-red"><div class="stat-num">${rechazadas}</div><div class="stat-label">Rechazadas</div></div>`;
+    if(!mias.length){document.getElementById('mis-cot-lista').innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No tienes cotizaciones aún</div>';return;}
+    document.getElementById('mis-cot-lista').innerHTML=mias.map((c,i)=>renderCotCard(c,i,false)).join('');
+  });
+}
+
+function cargarCotizacionesPendientes() {
+  cargarTodasCotizaciones().then(()=>{
+    const pendientes = todasCotizaciones.filter(c=>c.estado==='pendiente');
+    if(!pendientes.length){document.getElementById('aprobar-lista').innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No hay cotizaciones pendientes 🎉</div>';return;}
+    document.getElementById('aprobar-lista').innerHTML=pendientes.map((c,i)=>renderCotCard(c,i,true)).join('');
+  });
+}
+
+function renderCotCard(c, i, isAdmin) {
+  const estadoColor = c.estado==='aprobada'?'var(--green-dark)':c.estado==='rechazada'?'var(--red-dark)':c.estado==='cerrada'?'var(--blue-dark)':'var(--amber-dark)';
+  const estadoBg = c.estado==='aprobada'?'var(--green-light)':c.estado==='rechazada'?'var(--red-light)':c.estado==='cerrada'?'var(--blue-light)':'var(--amber-light)';
+  const estadoLabel = c.estado==='aprobada'?'✅ Aprobada':c.estado==='rechazada'?'❌ Rechazada':c.estado==='cerrada'?'🔒 Cerrada':'⏳ Pendiente';
+  const adminBtns = isAdmin ? `
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="aprobarCotizacion(${i},'aprobada')" style="flex:1;padding:9px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit;font-weight:500">✅ Aprobar</button>
+      <button onclick="aprobarCotizacion(${i},'rechazada')" style="flex:1;padding:9px;background:var(--red-light);border:0.5px solid var(--red-border);border-radius:var(--rsm);font-size:13px;color:var(--red-dark);cursor:pointer;font-family:inherit">❌ Rechazar</button>
+    </div>
+    <div style="margin-top:8px">
+      <input type="number" id="km-edit-${i}" placeholder="Ajustar precio por km (RD$14 default)" style="width:100%;padding:8px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:14px;color:var(--text);font-family:inherit;outline:none" value="14"/>
+    </div>` : '';
+  const pdfBtn = (c.pdfUrl && c.estado==='aprobada') ? `<a href="${c.pdfUrl}" target="_blank" style="display:block;width:100%;padding:9px;background:#E8EAF6;border:0.5px solid #9FA8DA;border-radius:var(--rsm);font-size:13px;color:#3949AB;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;margin-top:8px;box-sizing:border-box">📄 Ver / Compartir PDF</a>` : '';
+  const vendedorBtns = (!isAdmin && c.estado==='aprobada') ? `
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button onclick="copiarMsgCotizacion(${i})" style="flex:1;padding:9px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit">📱 WhatsApp</button>
+      <button onclick="marcarCerrada(${i})" style="flex:1;padding:9px;background:var(--blue-light);border:0.5px solid var(--blue-border);border-radius:var(--rsm);font-size:13px;color:var(--blue-dark);cursor:pointer;font-family:inherit">🔒 Cerrar venta</button>
+    </div>${pdfBtn}` : '';
+  return `<div class="card" style="margin-bottom:10px">
+    <div style="padding:14px 16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:15px;font-weight:500;color:var(--text)">${c.cliente}</div>
+        <span style="font-size:11px;padding:4px 10px;border-radius:100px;background:${estadoBg};color:${estadoColor}">${estadoLabel}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+        <div style="background:var(--bg);border-radius:var(--rsm);padding:8px 10px"><div style="font-size:11px;color:var(--text3)">Producto</div><div style="font-size:13px;font-weight:500;color:var(--text)">${c.arena}</div></div>
+        <div style="background:var(--bg);border-radius:var(--rsm);padding:8px 10px"><div style="font-size:11px;color:var(--text3)">Volumen</div><div style="font-size:13px;font-weight:500;color:var(--text)">${c.volumen} m³</div></div>
+        <div style="background:var(--bg);border-radius:var(--rsm);padding:8px 10px"><div style="font-size:11px;color:var(--text3)">Distancia</div><div style="font-size:13px;font-weight:500;color:var(--text)">${c.distancia} km</div></div>
+        <div style="background:var(--green-light);border-radius:var(--rsm);padding:8px 10px"><div style="font-size:11px;color:var(--green-dark)">Total</div><div style="font-size:14px;font-weight:500;color:var(--green-dark)">${c.total}</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--text3)">${c.fecha} · ${c.vendedor}</div>
+      ${c.notaAdmin?`<div style="margin-top:6px;font-size:12px;color:var(--text2);font-style:italic">Nota admin: ${c.notaAdmin}</div>`:''}
+      ${adminBtns}${vendedorBtns}
+    </div>
+  </div>`;
+}
+
+async function aprobarCotizacion(i, estado) {
+  const pendientes = todasCotizaciones.filter(c=>c.estado==='pendiente');
+  const cot = pendientes[i];
+  if(!cot) return;
+  const kmEdit = document.getElementById('km-edit-'+i);
+  const kmPrecio = kmEdit ? parseFloat(kmEdit.value)||14 : 14;
+  const data = {action:'actualizarCotizacion', id:cot.id, estado, kmPrecio, notaAdmin:estado==='rechazada'?'Rechazada por administrador':''};
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast(estado==='aprobada'?'✅ Cotización aprobada':'❌ Cotización rechazada');
+    await cargarTodasCotizaciones();
+    cargarCotizacionesPendientes();
+  } catch(e){showToast('Error actualizando',true);}
+}
+
+function copiarMsgCotizacion(i) {
+  const mias = todasCotizaciones.filter(c=>c.vendedor===currentUser.nombre);
+  const c = mias[i];
+  if(!c) return;
+  const msg = `Estimado ${c.cliente},
+
+Le presentamos nuestra cotización:
+
+📦 Producto: ${c.arena}
+📐 Volumen: ${c.volumen} m³
+🚛 Distancia: ${c.distancia} km
+
+💰 Total: ${c.total}
+
+*Precio incluye flete. Válido por 7 días.*
+
+Arena Faleria Comercial`;
+  if(navigator.clipboard){navigator.clipboard.writeText(msg).then(()=>showToast('✓ Copiado para WhatsApp'));}
+}
+
+async function marcarCerrada(i) {
+  const mias = todasCotizaciones.filter(c=>c.vendedor===currentUser.nombre&&c.estado==='aprobada');
+  const cot = mias[i];
+  if(!cot) return;
+  const metodoPago = prompt('Metodo de pago: 1=Efectivo en cantera, 2=Transferencia, 3=Cheque');
+  if(!metodoPago) return;
+  const metodos = {'1':'Efectivo en cantera','2':'Transferencia','3':'Cheque'};
+  const metodo = metodos[metodoPago]||'Efectivo';
+  const data = {action:'cerrarVenta',id:cot.id,metodoPago:metodo,fechaPago:new Date().toLocaleString('es-DO'),vendedor:currentUser.nombre,cliente:cot.cliente,total:cot.total,totalNum:cot.totalNum};
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('✓ Venta cerrada — pendiente confirmación de pago');
+    cargarMisCotizaciones();
+  } catch(e){showToast('Error',true);}
+}
+
+// PAGOS
+async function cargarPagos() {
+  try {
+    const url = SHEET_URL.replace('/exec','/exec?action=getVentas');
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.ventas) renderPagos(data.ventas);
+  } catch(e){}
+}
+
+function renderPagos(ventas) {
+  const pendientes = ventas.filter(v=>v.estadoPago!=='pagado');
+  const pagados = ventas.filter(v=>v.estadoPago==='pagado');
+  const totalPendiente = pendientes.reduce((s,v)=>s+(v.totalNum||0),0);
+  const totalCobrado = pagados.reduce((s,v)=>s+(v.totalNum||0),0);
+  const fmt = n=>'RD$'+Math.round(n).toLocaleString('es-DO');
+  document.getElementById('pagos-stats').innerHTML=`
+    <div class="stat s-amber"><div class="stat-num" style="font-size:18px">${fmt(totalPendiente)}</div><div class="stat-label">Pendiente de cobro</div></div>
+    <div class="stat s-green"><div class="stat-num" style="font-size:18px">${fmt(totalCobrado)}</div><div class="stat-label">Cobrado total</div></div>`;
+  document.getElementById('pagos-lista').innerHTML = pendientes.length ? pendientes.map((v,i)=>`
+    <div class="card" style="margin-bottom:10px">
+      <div style="padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:14px;font-weight:500">${v.cliente}</div>
+          <span style="font-size:14px;font-weight:500;color:var(--green-dark)">${v.total}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${v.arena} · ${v.volumen}m³ · ${v.vendedor} · ${v.fecha}</div>
+        <div style="font-size:12px;color:var(--amber-dark);margin-bottom:8px">Método: ${v.metodoPago||'Por definir'}</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="confirmarPago(${i},'efectivo')" style="flex:1;padding:8px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:12px;color:var(--green-dark);cursor:pointer;font-family:inherit">💵 Confirmar pago</button>
+          <button onclick="confirmarPago(${i},'parcial')" style="flex:1;padding:8px;background:var(--amber-light);border:0.5px solid var(--amber-border);border-radius:var(--rsm);font-size:12px;color:var(--amber-dark);cursor:pointer;font-family:inherit">💰 Abono parcial</button>
+        </div>
+      </div>
+    </div>`).join('') : '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No hay pagos pendientes 🎉</div>';
+  document.getElementById('pagos-historial').innerHTML = pagados.length ? pagados.slice(0,10).map(v=>`
+    <div class="list-item">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">✅</div>
+      <div class="list-info"><div class="list-name">${v.cliente}</div><div class="list-sub">${v.metodoPago||'Efectivo'} · ${v.fecha}</div></div>
+      <span style="font-size:13px;font-weight:500;color:var(--green-dark)">${v.total}</span>
+    </div>`).join('') : '<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin historial aún</div>';
+  window._ventasPendientes = pendientes;
+}
+
+async function confirmarPago(i, tipo) {
+  const venta = window._ventasPendientes?.[i];
+  if(!venta) return;
+  let monto = venta.totalNum;
+  if(tipo==='parcial') {
+    const input = prompt('¿Cuánto abonó el cliente? (RD$)');
+    if(!input) return;
+    monto = parseFloat(input.replace(/[^0-9.]/g,''))||0;
+  }
+  const data = {action:'confirmarPago',id:venta.id,monto,tipo,fecha:new Date().toLocaleString('es-DO')};
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('✓ Pago de RD$'+Math.round(monto).toLocaleString('es-DO')+' confirmado');
+    cargarPagos();
+    cargarVentasDashboard();
+  } catch(e){showToast('Error confirmando pago',true);}
+}
+
+// TOAST
+function showToast(msg,err) {
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='toast'+(err?' err':'');t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// INIT
+checkSession();
+</script>
+</body>
+</html>
