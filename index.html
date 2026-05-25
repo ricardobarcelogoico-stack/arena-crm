@@ -505,6 +505,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           </select>
         </div>
         <div class="field"><label>Volumen (m³)</label><input type="number" id="cot-vol" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
+        <div class="field"><label>Fecha de entrega estimada</label><input type="date" id="cot-fecha-entrega"/></div>
+        <div class="field"><label>Notas adicionales</label><input type="text" id="cot-notas-extra" placeholder="Condiciones especiales, horario de entrega..." autocomplete="off"/></div>
         <div class="field">
           <label>Distancia al cliente</label>
           <button type="button" onclick="calcDistanciaGPS()" style="width:100%;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:10px 14px;font-size:14px;font-weight:500;color:var(--green-dark);cursor:pointer;font-family:inherit;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px">🛣️ Calcular distancia real por carretera</button>
@@ -1138,6 +1140,8 @@ async function generarCotPDF() {
   btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Guardando...';
   // Get client contact data if available
   const clienteData = allClientes.find(c=>c.nombre===cliente) || {};
+  const fechaEntrega = document.getElementById('cot-fecha-entrega').value;
+  const notasExtra = document.getElementById('cot-notas-extra').value;
   const data = {
     action:'saveCotizacion',
     fecha:new Date().toLocaleString('es-DO'),
@@ -1147,6 +1151,8 @@ async function generarCotPDF() {
     contactoCliente: clienteData.contacto||'',
     telefonoCliente: clienteData.telefono||'',
     provinciaCliente: clienteData.provincia||'',
+    fechaEntrega,
+    notasExtra,
     arena:arena.split(' —')[0],
     volumen:vol,
     distancia:km,
@@ -1509,19 +1515,31 @@ function renderCotCard(c, i, isAdmin) {
   const estadoBg = c.estado==='aprobada'?'var(--green-light)':c.estado==='rechazada'?'var(--red-light)':c.estado==='cerrada'?'var(--blue-light)':'var(--amber-light)';
   const estadoLabel = c.estado==='aprobada'?'✅ Aprobada':c.estado==='rechazada'?'❌ Rechazada':c.estado==='cerrada'?'🔒 Cerrada':'⏳ Pendiente';
   const adminBtns = isAdmin ? `
-    <div style="display:flex;gap:8px;margin-top:10px">
+    ${c.solicitudDescuento ? `<div style="background:var(--amber-light);border:0.5px solid var(--amber-border);border-radius:var(--rsm);padding:10px 12px;margin-bottom:8px;font-size:12px;color:var(--amber-dark)">💰 <strong>Solicitud de ajuste:</strong> "${c.solicitudDescuento}"</div>` : ''}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Precio arena (RD$/m³)</div>
+        <input type="number" id="arena-edit-${i}" value="${c.precioUnitario||1000}" style="width:100%;padding:8px 10px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:14px;color:var(--text);font-family:inherit;outline:none" oninput="recalcCot(${i})"/>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Flete (RD$/m³/km)</div>
+        <input type="number" id="km-edit-${i}" value="14" style="width:100%;padding:8px 10px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:14px;color:var(--text);font-family:inherit;outline:none" oninput="recalcCot(${i})"/>
+      </div>
+    </div>
+    <div id="cot-recalc-${i}" style="background:var(--green-light);border-radius:var(--rsm);padding:8px 12px;font-size:13px;color:var(--green-dark);margin-bottom:8px;display:none"></div>
+    <div style="display:flex;gap:8px">
       <button onclick="aprobarCotizacion(${i},'aprobada')" style="flex:1;padding:9px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit;font-weight:500">✅ Aprobar</button>
       <button onclick="aprobarCotizacion(${i},'rechazada')" style="flex:1;padding:9px;background:var(--red-light);border:0.5px solid var(--red-border);border-radius:var(--rsm);font-size:13px;color:var(--red-dark);cursor:pointer;font-family:inherit">❌ Rechazar</button>
-    </div>
-    <div style="margin-top:8px">
-      <input type="number" id="km-edit-${i}" placeholder="Ajustar precio por km (RD$14 default)" style="width:100%;padding:8px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:14px;color:var(--text);font-family:inherit;outline:none" value="14"/>
     </div>` : '';
   const pdfBtn = (c.pdfUrl && c.estado==='aprobada') ? `<a href="${c.pdfUrl}" target="_blank" style="display:block;width:100%;padding:9px;background:#E8EAF6;border:0.5px solid #9FA8DA;border-radius:var(--rsm);font-size:13px;color:#3949AB;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;margin-top:8px;box-sizing:border-box">📄 Ver / Compartir PDF</a>` : '';
+  const solDescBtn = (!isAdmin && (c.estado==='aprobada'||c.estado==='pendiente') && !c.solicitudDescuento) ? `
+    <button onclick="solicitarDescuento(${i})" style="width:100%;padding:9px;background:var(--amber-light);border:0.5px solid var(--amber-border);border-radius:var(--rsm);font-size:13px;color:var(--amber-dark);cursor:pointer;font-family:inherit;margin-top:8px">💰 Solicitar ajuste de precio</button>` : 
+    (c.solicitudDescuento && c.estado!=='aprobada') ? `<div style="margin-top:8px;padding:8px 12px;background:var(--amber-light);border-radius:var(--rsm);font-size:12px;color:var(--amber-dark)">⏳ Ajuste solicitado: "${c.solicitudDescuento}"</div>` : '';
   const vendedorBtns = (!isAdmin && c.estado==='aprobada') ? `
     <div style="display:flex;gap:8px;margin-top:10px">
       <button onclick="copiarMsgCotizacion(${i})" style="flex:1;padding:9px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit">📱 WhatsApp</button>
       <button onclick="marcarCerrada(${i})" style="flex:1;padding:9px;background:var(--blue-light);border:0.5px solid var(--blue-border);border-radius:var(--rsm);font-size:13px;color:var(--blue-dark);cursor:pointer;font-family:inherit">🔒 Cerrar venta</button>
-    </div>${pdfBtn}` : '';
+    </div>${pdfBtn}${solDescBtn}` : `${solDescBtn}`;
   return `<div class="card" style="margin-bottom:10px">
     <div style="padding:14px 16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -1541,13 +1559,60 @@ function renderCotCard(c, i, isAdmin) {
   </div>`;
 }
 
+function recalcCot(i) {
+  const pendientes = todasCotizaciones.filter(c=>c.estado==='pendiente'||c.solicitudDescuento);
+  const c = pendientes[i];
+  if(!c) return;
+  const precioArena = parseFloat(document.getElementById('arena-edit-'+i)?.value)||c.precioUnitario||1000;
+  const precioKm = parseFloat(document.getElementById('km-edit-'+i)?.value)||14;
+  const vol = parseFloat(c.volumen)||0;
+  const km = parseFloat(c.distancia)||0;
+  const subtArena = precioArena * vol;
+  const subtFlete = precioKm * vol * km;
+  const total = subtArena + subtFlete;
+  const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+  const box = document.getElementById('cot-recalc-'+i);
+  if(box) {
+    box.style.display='block';
+    box.textContent = 'Nuevo total: ' + fmt(total) + ' (Arena: ' + fmt(subtArena) + ' + Flete: ' + fmt(subtFlete) + ')';
+  }
+}
+
+async function solicitarDescuento(i) {
+  const mias = todasCotizaciones.filter(c=>c.vendedor===currentUser.nombre);
+  const cot = mias[i];
+  if(!cot) return;
+  const motivo = prompt('¿Por qué el cliente pide ajuste de precio?\nEj: Tiene oferta más baja, cliente frecuente, volumen alto...');
+  if(!motivo) return;
+  const data = {action:'solicitarDescuento', id:cot.id, solicitud:motivo};
+  try {
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    showToast('✓ Solicitud enviada al administrador');
+    await cargarTodasCotizaciones();
+    cargarMisCotizaciones();
+  } catch(e){showToast('Error enviando solicitud',true);}
+}
+
 async function aprobarCotizacion(i, estado) {
-  const pendientes = todasCotizaciones.filter(c=>c.estado==='pendiente');
+  const pendientes = todasCotizaciones.filter(c=>c.estado==='pendiente'||c.solicitudDescuento);
   const cot = pendientes[i];
   if(!cot) return;
   const kmEdit = document.getElementById('km-edit-'+i);
+  const arenaEdit = document.getElementById('arena-edit-'+i);
   const kmPrecio = kmEdit ? parseFloat(kmEdit.value)||14 : 14;
-  const data = {action:'actualizarCotizacion', id:cot.id, estado, kmPrecio, notaAdmin:estado==='rechazada'?'Rechazada por administrador':''};
+  const precioArena = arenaEdit ? parseFloat(arenaEdit.value)||cot.precioUnitario||1000 : cot.precioUnitario||1000;
+  const vol = parseFloat(cot.volumen)||0;
+  const km = parseFloat(cot.distancia)||0;
+  const subtArena = precioArena * vol;
+  const subtFlete = kmPrecio * vol * km;
+  const total = subtArena + subtFlete;
+  const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+  const data = {
+    action:'actualizarCotizacion', id:cot.id, estado, kmPrecio, precioArena,
+    subtArena:fmt(subtArena), subtFlete:fmt(subtFlete),
+    total:fmt(total), totalNum:Math.round(total),
+    notaAdmin:estado==='rechazada'?'Rechazada por administrador':''
+  };
   try {
     await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     showToast(estado==='aprobada'?'✅ Cotización aprobada':'❌ Cotización rechazada');
