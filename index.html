@@ -505,8 +505,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           </select>
         </div>
         <div class="field"><label>Volumen (m³)</label><input type="number" id="cot-vol" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
-        <div class="field"><label>Fecha de entrega estimada</label><input type="date" id="cot-fecha-entrega"/></div>
-        <div class="field"><label>Notas adicionales</label><input type="text" id="cot-notas-extra" placeholder="Condiciones especiales, horario de entrega..." autocomplete="off"/></div>
+        <div class="field">
+          <label>Fecha de entrega estimada</label>
+          <input type="date" id="cot-fecha-entrega" style="width:100%;background:transparent;border:none;outline:none;font-size:16px;color:var(--text);font-family:inherit;padding:0;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:24px"/>
+        </div>
+        <div class="field">
+          <label>Notas adicionales</label>
+          <input type="text" id="cot-notas-extra" placeholder="Condiciones especiales, horario de entrega..." autocomplete="off"/>
+        </div>
         <div class="field">
           <label>Distancia al cliente</label>
           <button type="button" onclick="calcDistanciaGPS()" style="width:100%;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:10px 14px;font-size:14px;font-weight:500;color:var(--green-dark);cursor:pointer;font-family:inherit;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px">🛣️ Calcular distancia real por carretera</button>
