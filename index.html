@@ -476,64 +476,108 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 
     <!-- COTIZADOR -->
     <div class="screen" id="screen-cotizador">
-      <div class="sec-label">Punto de origen (cantera)</div>
-      <div class="card">
-        <div class="field">
-          <label>Cantera / depósito de despacho</label>
-          <select id="cot-cantera" onchange="calcCotizacion()">
-            <option value="18.907931781426505,-69.35947147481276">Cantera principal</option>
-          </select>
-        </div>
+
+      <div class="sec-label">Modo de cotización</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <button onclick="setCotMode('auto')" id="cot-mode-auto" type="button" style="padding:12px 8px;background:var(--green-light);border:1.5px solid var(--green-border);border-radius:var(--r);font-size:13px;font-weight:500;color:var(--green-dark);cursor:pointer;font-family:inherit;text-align:center">
+          🧮 Automático<br><span style="font-size:11px;font-weight:400;opacity:0.8">Calcula con precios base</span>
+        </button>
+        <button onclick="setCotMode('manual')" id="cot-mode-manual" type="button" style="padding:12px 8px;background:var(--card);border:0.5px solid var(--border);border-radius:var(--r);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;font-family:inherit;text-align:center">
+          ✏️ Precio acordado<br><span style="font-size:11px;font-weight:400;opacity:0.8">Pongo el precio directo</span>
+        </button>
       </div>
-      <div class="sec-label">Datos de la cotización</div>
+
+      <div class="sec-label">Cliente</div>
       <div class="card">
         <div class="field">
-          <label>Cliente</label>
+          <label>Seleccionar cliente</label>
           <select id="cot-cliente-select" onchange="selClienteCotizador()">
-            <option value="">Seleccionar cliente...</option>
-          </select>
-        </div>
-        <div class="field"><label>O escribe un cliente nuevo</label><input type="text" id="cot-cliente" placeholder="Nombre del cliente" autocomplete="off"/></div>
-        <div class="field">
-          <label>Tipo de arena</label>
-          <select id="cot-arena" onchange="calcCotizacion()">
             <option value="">Seleccionar...</option>
-            <option value="1200">Arena lavada — RD$1,200/m³</option>
-            <option value="1000">Arena blocks — RD$1,000/m³</option>
-            <option value="1000">Arena de pañete — RD$1,000/m³</option>
-            <option value="800">Arena zarandeada — RD$800/m³</option>
           </select>
         </div>
-        <div class="field"><label>Volumen (m³)</label><input type="number" id="cot-vol" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
-        <div class="field">
-          <label>Fecha de entrega estimada</label>
-          <input type="date" id="cot-fecha-entrega" style="width:100%;background:transparent;border:none;outline:none;font-size:16px;color:var(--text);font-family:inherit;padding:0;-webkit-appearance:none;appearance:none;cursor:pointer;min-height:24px"/>
+        <div class="field"><label>O escribe cliente nuevo</label><input type="text" id="cot-cliente" placeholder="Nombre del cliente" autocomplete="off"/></div>
+      </div>
+
+      <!-- MODO AUTOMÁTICO -->
+      <div id="cot-auto-section">
+        <div class="sec-label">Detalle</div>
+        <div class="card">
+          <div class="field">
+            <label>Tipo de arena</label>
+            <select id="cot-arena" onchange="calcCotizacion()">
+              <option value="">Seleccionar...</option>
+              <option value="1200">Arena lavada — RD$1,200/m³</option>
+              <option value="1000">Arena blocks — RD$1,000/m³</option>
+              <option value="1000">Arena de pañete — RD$1,000/m³</option>
+              <option value="800">Arena zarandeada — RD$800/m³</option>
+            </select>
+          </div>
+          <div class="field"><label>Volumen (m³)</label><input type="number" id="cot-vol" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
+          <div class="field">
+            <label>Tipo de flete</label>
+            <select id="cot-flete-tipo" onchange="cambiarTipoFlete()">
+              <option value="km">Calcular por km — RD$14/m³/km</option>
+              <option value="hato-mayor">Hato Mayor — RD$250/m³ fijo</option>
+              <option value="el-seibo">El Seibo — RD$300/m³ fijo</option>
+              <option value="consuelo">Consuelo — RD$300/m³ fijo</option>
+              <option value="otro">Otra zona — precio fijo manual</option>
+            </select>
+          </div>
+          <div id="cot-km-section">
+            <div class="field">
+              <button type="button" onclick="calcDistanciaGPS()" style="width:100%;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:10px 14px;font-size:14px;font-weight:500;color:var(--green-dark);cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">🛣️ Calcular distancia real</button>
+              <div id="cot-km-display" style="font-size:12px;color:var(--text3);margin-top:6px;text-align:center"></div>
+              <div style="margin-top:8px">
+                <label style="font-size:11px;color:var(--text3)">Distancia (km) — editable</label>
+                <input type="number" id="cot-km" placeholder="0" inputmode="decimal" oninput="calcCotizacion()" step="0.1"/>
+              </div>
+            </div>
+          </div>
+          <div id="cot-flete-fijo-section" style="display:none">
+            <div class="field"><label>Precio flete fijo (RD$/m³)</label><input type="number" id="cot-flete-fijo" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
+          </div>
         </div>
-        <div class="field">
-          <label>Notas adicionales</label>
-          <input type="text" id="cot-notas-extra" placeholder="Condiciones especiales, horario de entrega..." autocomplete="off"/>
-        </div>
-        <div class="field">
-          <label>Distancia al cliente</label>
-          <button type="button" onclick="calcDistanciaGPS()" style="width:100%;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:10px 14px;font-size:14px;font-weight:500;color:var(--green-dark);cursor:pointer;font-family:inherit;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px">🛣️ Calcular distancia real por carretera</button>
-          <div id="cot-km-display" style="font-size:12px;color:var(--text3);margin-top:6px;text-align:center"></div>
-          <div style="margin-top:8px">
-            <label style="font-size:11px;color:var(--text3)">Editar distancia si es necesario (km)</label>
-            <input type="number" id="cot-km" placeholder="0" inputmode="decimal" oninput="calcCotizacion()" step="0.1"/>
+        <div class="card" id="cot-result" style="display:none">
+          <div class="precio-row"><span class="precio-label">Arena</span><span class="precio-val" id="cot-subtotal-arena">—</span></div>
+          <div class="precio-row"><span class="precio-label">Flete</span><span class="precio-val" id="cot-subtotal-flete">—</span></div>
+          <div class="precio-row" id="cot-km-row" style="background:var(--blue-light)"><span class="precio-label" style="color:var(--blue-dark);font-size:12px">Detalle flete</span><span class="precio-val" style="color:var(--blue-dark);font-size:12px" id="cot-km-resultado">—</span></div>
+          <div class="total-row" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="total-label">Total estimado</span>
+            <span class="total-val" id="cot-total">—</span>
           </div>
         </div>
       </div>
-      <div class="card" id="cot-result" style="display:none">
-        <div class="precio-row"><span class="precio-label">Arena (m³ × precio)</span><span class="precio-val" id="cot-subtotal-arena">—</span></div>
-        <div class="precio-row"><span class="precio-label" id="cot-flete-label">Flete (RD$14/m³/km)</span><span class="precio-val" id="cot-subtotal-flete">—</span></div>
-        <div class="precio-row" style="background:var(--blue-light)"><span class="precio-label" style="color:var(--blue-dark);font-size:12px">Distancia calculada</span><span class="precio-val" style="color:var(--blue-dark)" id="cot-km-resultado">—</span></div>
-        <div class="total-row" style="display:flex;align-items:center;justify-content:space-between">
-          <span class="total-label">Total estimado</span>
-          <span class="total-val" id="cot-total">—</span>
+
+      <!-- MODO MANUAL -->
+      <div id="cot-manual-section" style="display:none">
+        <div class="sec-label">Precio acordado con el cliente</div>
+        <div class="card">
+          <div class="field"><label>Descripción del producto</label><input type="text" id="cot-manual-arena" placeholder="Ej. Arena blocks, Arena lavada..." autocomplete="off"/></div>
+          <div class="field"><label>Volumen (m³)</label><input type="number" id="cot-manual-vol" placeholder="0" inputmode="decimal" oninput="calcManual()"/></div>
+          <div class="field"><label>Precio total acordado (RD$)</label><input type="number" id="cot-manual-precio-total" placeholder="0" inputmode="decimal" oninput="calcManual()"/></div>
+          <div class="field"><label>Del cual, arena (RD$) — opcional</label><input type="number" id="cot-manual-sub-arena" placeholder="0" inputmode="decimal" oninput="calcManual()"/></div>
+          <div class="field"><label>Del cual, flete (RD$) — opcional</label><input type="number" id="cot-manual-sub-flete" placeholder="0" inputmode="decimal" oninput="calcManual()"/></div>
+        </div>
+        <div class="card" id="cot-manual-result" style="display:none">
+          <div class="precio-row"><span class="precio-label">Arena</span><span class="precio-val" id="cot-manual-display-arena">—</span></div>
+          <div class="precio-row"><span class="precio-label">Flete</span><span class="precio-val" id="cot-manual-display-flete">—</span></div>
+          <div class="total-row" style="display:flex;align-items:center;justify-content:space-between">
+            <span class="total-label">Total acordado</span>
+            <span class="total-val" id="cot-manual-display-total">—</span>
+          </div>
         </div>
       </div>
-      <button class="btn-primary" onclick="generarCotPDF()" id="cot-pdf-btn" style="display:none">📄 Guardar cotización</button>
-      <button class="btn-secondary" onclick="copiarCotizacion()">📋 Copiar mensaje para WhatsApp</button>
+
+      <div class="card" style="margin-top:12px">
+        <div class="field">
+          <label>Fecha de entrega estimada</label>
+          <input type="date" id="cot-fecha-entrega" style="width:100%;background:transparent;border:none;outline:none;font-size:16px;color:var(--text);font-family:inherit;padding:4px 0;cursor:pointer"/>
+        </div>
+        <div class="field"><label>Notas</label><input type="text" id="cot-notas-extra" placeholder="Condiciones, horario de entrega..." autocomplete="off"/></div>
+      </div>
+
+      <button class="btn-primary" onclick="generarCotPDF()" style="margin-top:12px">📄 Guardar cotización</button>
+      <button class="btn-secondary" onclick="copiarCotizacion()">📋 Copiar para WhatsApp</button>
     </div>
 
     <!-- RUTAS -->
@@ -1028,6 +1072,51 @@ function resetReporte() {
 }
 
 // COTIZADOR
+let cotMode = 'auto';
+
+function setCotMode(mode) {
+  cotMode = mode;
+  const autoBtn = document.getElementById('cot-mode-auto');
+  const manualBtn = document.getElementById('cot-mode-manual');
+  const autoSection = document.getElementById('cot-auto-section');
+  const manualSection = document.getElementById('cot-manual-section');
+  if(mode === 'auto') {
+    autoBtn.style.background='var(--green-light)';autoBtn.style.border='1.5px solid var(--green-border)';autoBtn.style.color='var(--green-dark)';
+    manualBtn.style.background='var(--card)';manualBtn.style.border='0.5px solid var(--border)';manualBtn.style.color='var(--text2)';
+    autoSection.style.display='block';manualSection.style.display='none';
+  } else {
+    manualBtn.style.background='var(--green-light)';manualBtn.style.border='1.5px solid var(--green-border)';manualBtn.style.color='var(--green-dark)';
+    autoBtn.style.background='var(--card)';autoBtn.style.border='0.5px solid var(--border)';autoBtn.style.color='var(--text2)';
+    autoSection.style.display='none';manualSection.style.display='block';
+  }
+}
+
+function cambiarTipoFlete() {
+  const tipo = document.getElementById('cot-flete-tipo').value;
+  const kmSection = document.getElementById('cot-km-section');
+  const fijoSection = document.getElementById('cot-flete-fijo-section');
+  const PRECIOS_FIJOS = {'hato-mayor':250,'el-seibo':300,'consuelo':300};
+  if(tipo === 'km') {
+    kmSection.style.display='block';fijoSection.style.display='none';
+  } else {
+    kmSection.style.display='none';fijoSection.style.display='block';
+    if(PRECIOS_FIJOS[tipo]) document.getElementById('cot-flete-fijo').value=PRECIOS_FIJOS[tipo];
+  }
+  calcCotizacion();
+}
+
+function calcManual() {
+  const total = parseFloat(document.getElementById('cot-manual-precio-total').value)||0;
+  if(!total){document.getElementById('cot-manual-result').style.display='none';return;}
+  const subArena = parseFloat(document.getElementById('cot-manual-sub-arena').value)||0;
+  const subFlete = parseFloat(document.getElementById('cot-manual-sub-flete').value)||0;
+  const fmt = n => n ? 'RD$'+Math.round(n).toLocaleString('es-DO') : '—';
+  document.getElementById('cot-manual-display-arena').textContent = fmt(subArena);
+  document.getElementById('cot-manual-display-flete').textContent = fmt(subFlete);
+  document.getElementById('cot-manual-display-total').textContent = 'RD$'+Math.round(total).toLocaleString('es-DO');
+  document.getElementById('cot-manual-result').style.display='block';
+}
+
 const PRECIOS = {'Arena lavada':1200,'Arena blocks':1000,'Arena de pañete':1000,'Arena zarandeada':800};
 const FLETE = 14;
 let cotKmCalculado = null;
@@ -1101,20 +1190,31 @@ async function calcDistanciaGPS() {
 function calcCotizacion() {
   const precioStr = document.getElementById('cot-arena').value;
   const vol = parseFloat(document.getElementById('cot-vol').value)||0;
-  const km = parseFloat(document.getElementById('cot-km').value)||0;
   const result = document.getElementById('cot-result');
-  const pdfBtn = document.getElementById('cot-pdf-btn');
-  if(!precioStr||!vol){result.style.display='none';pdfBtn.style.display='none';return;}
+  if(!precioStr||!vol){result.style.display='none';return;}
   const precio = parseFloat(precioStr);
   const subtArena = precio * vol;
-  const subtFlete = FLETE * vol * km;
-  const total = subtArena + subtFlete;
   const fmt = n => 'RD$' + Math.round(n).toLocaleString('es-DO');
+  const tipoFlete = document.getElementById('cot-flete-tipo').value;
+  let subtFlete = 0;
+  let fletelabel = '';
+  if(tipoFlete === 'km') {
+    const km = parseFloat(document.getElementById('cot-km').value)||0;
+    subtFlete = FLETE * vol * km;
+    fletelabel = km + ' km × ' + vol + ' m³ × RD$14';
+    document.getElementById('cot-km-row').style.display='flex';
+  } else {
+    const pFijo = parseFloat(document.getElementById('cot-flete-fijo').value)||0;
+    subtFlete = pFijo * vol;
+    fletelabel = 'RD$' + pFijo + '/m³ × ' + vol + ' m³ (zona fija)';
+    document.getElementById('cot-km-row').style.display='flex';
+  }
+  const total = subtArena + subtFlete;
   document.getElementById('cot-subtotal-arena').textContent = fmt(subtArena);
   document.getElementById('cot-subtotal-flete').textContent = fmt(subtFlete);
-  document.getElementById('cot-km-resultado').textContent = km + ' km × ' + vol + ' m³ × RD$14';
+  document.getElementById('cot-km-resultado').textContent = fletelabel;
   document.getElementById('cot-total').textContent = fmt(total);
-  result.style.display='block';pdfBtn.style.display='block';
+  result.style.display='block';
 }
 
 function copiarCotizacion() {
@@ -1130,24 +1230,47 @@ function copiarCotizacion() {
 }
 
 async function generarCotPDF() {
-  const cliente = document.getElementById('cot-cliente').value.trim();
-  if(!cliente){showToast('Escribe el nombre del cliente',true);return;}
-  const arenaEl = document.getElementById('cot-arena');
-  const arena = arenaEl.options[arenaEl.selectedIndex]?.text||'';
-  if(!arena){showToast('Selecciona el tipo de arena',true);return;}
-  const vol = document.getElementById('cot-vol').value;
-  const km = document.getElementById('cot-km').value;
-  if(!vol||!km){showToast('Completa volumen y distancia',true);return;}
-  const subtArena = document.getElementById('cot-subtotal-arena').textContent;
-  const subtFlete = document.getElementById('cot-subtotal-flete').textContent;
-  const total = document.getElementById('cot-total').textContent;
-  const totalNum = parseFloat(vol)*(parseFloat(arenaEl.value)+14*parseFloat(km));
+  const clienteSelect = document.getElementById('cot-cliente-select').value;
+  const clienteText = document.getElementById('cot-cliente').value.trim();
+  const cliente = clienteText || (clienteSelect ? clienteSelect.split('|')[0] : '');
+  if(!cliente){showToast('Escribe o selecciona un cliente',true);return;}
+
+  let arena, vol, km, subtArena, subtFlete, total, totalNum, precioUnitario, distancia;
+
+  if(cotMode === 'manual') {
+    arena = document.getElementById('cot-manual-arena').value.trim()||'Arena';
+    vol = document.getElementById('cot-manual-vol').value||'0';
+    totalNum = parseFloat(document.getElementById('cot-manual-precio-total').value)||0;
+    if(!totalNum){showToast('Escribe el precio acordado',true);return;}
+    subtArena = document.getElementById('cot-manual-sub-arena').value ? 'RD$'+parseFloat(document.getElementById('cot-manual-sub-arena').value).toLocaleString('es-DO') : '—';
+    subtFlete = document.getElementById('cot-manual-sub-flete').value ? 'RD$'+parseFloat(document.getElementById('cot-manual-sub-flete').value).toLocaleString('es-DO') : '—';
+    total = 'RD$'+Math.round(totalNum).toLocaleString('es-DO');
+    precioUnitario = 0; distancia = 0; km = 0;
+  } else {
+    const arenaEl = document.getElementById('cot-arena');
+    arena = arenaEl.options[arenaEl.selectedIndex]?.text?.split(' —')[0]||'';
+    if(!arena){showToast('Selecciona el tipo de arena',true);return;}
+    vol = document.getElementById('cot-vol').value;
+    if(!vol){showToast('Escribe el volumen',true);return;}
+    subtArena = document.getElementById('cot-subtotal-arena').textContent;
+    subtFlete = document.getElementById('cot-subtotal-flete').textContent;
+    total = document.getElementById('cot-total').textContent;
+    if(!total||total==='—'){showToast('Completa los datos del flete',true);return;}
+    precioUnitario = parseFloat(arenaEl.value)||0;
+    const tipoFlete = document.getElementById('cot-flete-tipo').value;
+    km = tipoFlete==='km' ? (document.getElementById('cot-km').value||0) : 0;
+    distancia = km;
+    const subtA = precioUnitario * parseFloat(vol);
+    const subtF = parseFloat(subtFlete.replace(/[^0-9.]/g,''))||0;
+    totalNum = subtA + subtF;
+  }
+
+  const fechaEntrega = document.getElementById('cot-fecha-entrega').value;
+  const notasExtra = document.getElementById('cot-notas-extra').value;
   const btn = document.getElementById('cot-pdf-btn');
   btn.disabled=true;btn.innerHTML='<div class="spinner"></div> Guardando...';
   // Get client contact data if available
   const clienteData = allClientes.find(c=>c.nombre===cliente) || {};
-  const fechaEntrega = document.getElementById('cot-fecha-entrega').value;
-  const notasExtra = document.getElementById('cot-notas-extra').value;
   const data = {
     action:'saveCotizacion',
     fecha:new Date().toLocaleString('es-DO'),
