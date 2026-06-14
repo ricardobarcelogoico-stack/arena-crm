@@ -547,7 +547,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
               <button type="button" onclick="buscarLugarMapa()" style="padding:8px 14px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit;white-space:nowrap">Buscar</button>
             </div>
           </div>
-          <div style="font-size:12px;color:var(--text3);padding:0 16px 8px">O toca el mapa para marcar el destino</div>
+          <div id="cot-search-results" style="display:none;margin-top:6px;border:0.5px solid var(--border);border-radius:var(--rsm);overflow:hidden;background:var(--card)"></div>
+          <div style="font-size:12px;color:var(--text3);padding:0 16px 8px;margin-top:4px">O toca el mapa para marcar el destino</div>
           <div id="cot-map" style="height:280px;width:100%"></div>
           <div id="cot-map-info" style="padding:12px 16px;display:none">
             <div style="display:flex;align-items:center;justify-content:space-between">
@@ -1399,16 +1400,40 @@ function usarDistanciaMapa() {
 async function buscarLugarMapa() {
   const q=document.getElementById('cot-map-search').value.trim();
   if(!q)return;
+  const resultsEl=document.getElementById('cot-search-results');
+  if(resultsEl){resultsEl.innerHTML='<div style="padding:10px 14px;font-size:13px;color:var(--text3)">Buscando...</div>';resultsEl.style.display='block';}
   try {
-    const res=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+', Republica Dominicana')+'&format=json&limit=1');
+    // Search with and without country to get more results
+    const res=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+' Dominican Republic')+'&format=json&limit=6&addressdetails=1&countrycodes=do');
     const data=await res.json();
-    if(data&&data[0]){
-      const lat=parseFloat(data[0].lat),lng=parseFloat(data[0].lon);
-      const nombre=data[0].display_name.split(',')[0];
-      cotMapInstance.setView([lat,lng],12);
-      marcarDestinoCotMap(lat,lng,nombre);
-    } else {showToast('Lugar no encontrado',true);}
-  } catch(e){showToast('Error buscando lugar',true);}
+    if(data&&data.length>0){
+      if(resultsEl){
+        resultsEl.style.display='block';
+        window._searchResults=data;
+        resultsEl.innerHTML=data.map((item,i)=>{
+          const nombre=item.display_name.split(',').slice(0,2).join(', ');
+          const tipo=item.type||item.class||'';
+          return `<div onclick="selResultado(${i})" style="padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:13px;color:var(--text)"><div style="font-weight:500">${nombre}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${tipo}</div></div>`;
+        }).join('');
+      }
+    } else {
+      if(resultsEl)resultsEl.innerHTML='<div style="padding:10px 14px;font-size:13px;color:var(--text3)">No se encontraron resultados. Intenta ser más específico o toca el mapa.</div>';
+    }
+  } catch(e){showToast('Error buscando lugar',true);if(resultsEl)resultsEl.style.display='none';}
+}
+
+function selResultado(i) {
+  const item=window._searchResults[i];
+  if(!item)return;
+  const nombre=item.display_name.split(',').slice(0,2).join(', ');
+  seleccionarResultado(item.lat,item.lon,nombre);
+}
+
+function seleccionarResultado(lat,lng,nombre) {
+  const resultsEl=document.getElementById('cot-search-results');
+  if(resultsEl)resultsEl.style.display='none';
+  cotMapInstance.setView([parseFloat(lat),parseFloat(lng)],14);
+  marcarDestinoCotMap(parseFloat(lat),parseFloat(lng),nombre);
 }
 
 // RUTAS
