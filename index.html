@@ -537,6 +537,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
             <div class="field"><label>Precio flete fijo (RD$/m³)</label><input type="number" id="cot-flete-fijo" placeholder="0" inputmode="decimal" oninput="calcCotizacion()"/></div>
           </div>
         </div>
+
+        <div class="sec-label">Mapa de ruta</div>
+        <div class="card" style="overflow:hidden">
+          <div class="field">
+            <label>Buscar destino por nombre</label>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="cot-map-search" placeholder="Ej. Santo Domingo, El Seibo..." style="flex:1" autocomplete="off" onkeydown="if(event.key==='Enter')buscarLugarMapa()"/>
+              <button type="button" onclick="buscarLugarMapa()" style="padding:8px 14px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit;white-space:nowrap">Buscar</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--text3);padding:0 16px 8px">O toca el mapa para marcar el destino</div>
+          <div id="cot-map" style="height:280px;width:100%"></div>
+          <div id="cot-map-info" style="padding:12px 16px;display:none">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div>
+                <div style="font-size:12px;color:var(--text3)">Distancia por carretera</div>
+                <div style="font-size:18px;font-weight:500;color:var(--green-dark)" id="cot-map-km">—</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:12px;color:var(--text3)">Tiempo estimado</div>
+                <div style="font-size:14px;font-weight:500;color:var(--text)" id="cot-map-tiempo">—</div>
+              </div>
+            </div>
+            <button type="button" onclick="usarDistanciaMapa()" style="width:100%;margin-top:10px;padding:9px;background:var(--green);border:none;border-radius:var(--rsm);font-size:13px;font-weight:500;color:#fff;cursor:pointer;font-family:inherit">✓ Usar esta distancia en la cotización</button>
+          </div>
+        </div>
         <div class="card" id="cot-result" style="display:none">
           <div class="precio-row"><span class="precio-label">Arena</span><span class="precio-val" id="cot-subtotal-arena">—</span></div>
           <div class="precio-row"><span class="precio-label">Flete</span><span class="precio-val" id="cot-subtotal-flete">—</span></div>
@@ -794,7 +820,7 @@ function goTo(screen) {
   if (screen === 'dashboard') cargarDashboard();
   if (screen === 'mapa') initMapa();
   if (screen === 'rutas') renderRutas();
-  if (screen === 'cotizador') poblarClientesCotizador();
+  if (screen === 'cotizador') { poblarClientesCotizador(); setTimeout(initCotMap, 200); }
   if (screen === 'cotizaciones') cargarMisCotizaciones();
   if (screen === 'aprobar') cargarCotizacionesPendientes();
   if (screen === 'pagos') cargarPagos();
@@ -1128,8 +1154,12 @@ function selClienteCotizador() {
   if(!val) return;
   const parts = val.split('|');
   document.getElementById('cot-cliente').value = parts[0];
-  if(parts[1] && parts[2]) {
+  if(parts[1] && parts[2] && parts[1]!=='') {
     cotClienteGPS = {lat: parseFloat(parts[1]), lng: parseFloat(parts[2])};
+    // Draw on map
+    if(cotMapInstance) {
+      marcarDestinoCotMap(cotClienteGPS.lat, cotClienteGPS.lng, parts[0]);
+    }
     calcDistanciaGPS();
   }
 }
@@ -1299,6 +1329,86 @@ async function generarCotPDF() {
       btn.disabled=false;btn.innerHTML='📄 Guardar cotización';
     },3000);
   } catch(e){showToast('Error guardando',true);btn.disabled=false;btn.innerHTML='📄 Guardar cotización';}
+}
+
+// MAPA COTIZADOR
+let cotMapInstance = null;
+let cotMapMarkerDestino = null;
+let cotMapMarkerOrigen = null;
+let cotMapRouteLine = null;
+let cotMapKmCalc = 0;
+const CANTERA_LAT = 18.907931781426505;
+const CANTERA_LNG = -69.35947147481276;
+
+function initCotMap() {
+  if(cotMapInstance){cotMapInstance.invalidateSize();return;}
+  setTimeout(()=>{
+    cotMapInstance=L.map('cot-map').setView([18.7357,-69.0633],8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'OpenStreetMap'}).addTo(cotMapInstance);
+    const cantIcon=L.divIcon({html:'<div style="width:14px;height:14px;border-radius:50%;background:#1D9E75;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',iconSize:[14,14],className:''});
+    cotMapMarkerOrigen=L.marker([CANTERA_LAT,CANTERA_LNG],{icon:cantIcon}).addTo(cotMapInstance);
+    cotMapMarkerOrigen.bindPopup('<b>Cantera Faleria</b><br>Punto de despacho');
+    cotMapInstance.on('click',function(e){marcarDestinoCotMap(e.latlng.lat,e.latlng.lng,'Destino seleccionado');});
+  },150);
+}
+
+function marcarDestinoCotMap(lat,lng,nombre) {
+  if(!cotMapInstance)return;
+  if(cotMapMarkerDestino)cotMapMarkerDestino.remove();
+  if(cotMapRouteLine)cotMapRouteLine.remove();
+  const destIcon=L.divIcon({html:'<div style="width:14px;height:14px;border-radius:50%;background:#F0997B;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',iconSize:[14,14],className:''});
+  cotMapMarkerDestino=L.marker([lat,lng],{icon:destIcon}).addTo(cotMapInstance);
+  cotMapMarkerDestino.bindPopup('<b>'+nombre+'</b>').openPopup();
+  calcRutaCotMap(lat,lng,nombre);
+}
+
+async function calcRutaCotMap(destLat,destLng,nombre) {
+  const infoEl=document.getElementById('cot-map-info');
+  if(infoEl)infoEl.style.display='none';
+  try {
+    const url='https://router.project-osrm.org/route/v1/driving/'+CANTERA_LNG+','+CANTERA_LAT+';'+destLng+','+destLat+'?overview=full&geometries=geojson';
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.code==='Ok'&&data.routes&&data.routes[0]){
+      const route=data.routes[0];
+      const kmReales=Math.round(route.distance/100)/10;
+      const minutos=Math.round(route.duration/60);
+      const tiempo=minutos>=60?Math.floor(minutos/60)+'h '+(minutos%60)+'min':minutos+' min';
+      cotMapKmCalc=kmReales;
+      if(cotMapRouteLine)cotMapRouteLine.remove();
+      cotMapRouteLine=L.geoJSON(route.geometry,{style:{color:'#1D9E75',weight:4,opacity:0.8}}).addTo(cotMapInstance);
+      cotMapInstance.fitBounds(cotMapRouteLine.getBounds(),{padding:[20,20]});
+      const gmUrl='https://www.google.com/maps/dir/'+CANTERA_LAT+','+CANTERA_LNG+'/'+destLat+','+destLng;
+      if(infoEl){
+        infoEl.style.display='block';
+        infoEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 8px"><div><div style="font-size:11px;color:var(--text3)">Distancia real por carretera</div><div style="font-size:20px;font-weight:500;color:var(--green-dark)">'+kmReales+' km</div></div><div style="text-align:right"><div style="font-size:11px;color:var(--text3)">Tiempo estimado</div><div style="font-size:14px;font-weight:500">'+tiempo+'</div></div></div><div style="display:flex;gap:8px;padding:0 16px 14px"><button type="button" onclick="usarDistanciaMapa()" style="flex:2;padding:9px;background:var(--green);border:none;border-radius:var(--rsm);font-size:13px;font-weight:500;color:#fff;cursor:pointer;font-family:inherit">Usar '+kmReales+' km en flete</button><a href="'+gmUrl+'" target="_blank" style="flex:1;padding:9px;background:var(--blue-light);border:0.5px solid var(--blue-border);border-radius:var(--rsm);font-size:12px;font-weight:500;color:var(--blue-dark);text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center">Google Maps</a></div>';
+      }
+    }
+  } catch(e){showToast('No se pudo calcular la ruta',true);}
+}
+
+function usarDistanciaMapa() {
+  if(!cotMapKmCalc)return;
+  document.getElementById('cot-km').value=cotMapKmCalc;
+  document.getElementById('cot-flete-tipo').value='km';
+  cambiarTipoFlete();
+  calcCotizacion();
+  showToast('Distancia de '+cotMapKmCalc+' km aplicada');
+}
+
+async function buscarLugarMapa() {
+  const q=document.getElementById('cot-map-search').value.trim();
+  if(!q)return;
+  try {
+    const res=await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+', Republica Dominicana')+'&format=json&limit=1');
+    const data=await res.json();
+    if(data&&data[0]){
+      const lat=parseFloat(data[0].lat),lng=parseFloat(data[0].lon);
+      const nombre=data[0].display_name.split(',')[0];
+      cotMapInstance.setView([lat,lng],12);
+      marcarDestinoCotMap(lat,lng,nombre);
+    } else {showToast('Lugar no encontrado',true);}
+  } catch(e){showToast('Error buscando lugar',true);}
 }
 
 // RUTAS
