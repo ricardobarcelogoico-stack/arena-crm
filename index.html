@@ -361,9 +361,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           <select id="f-provincia"><option value="">Seleccionar...</option><option>Distrito Nacional</option><option>Santo Domingo</option><option>Santiago</option><option>La Vega</option><option>San Cristóbal</option><option>Peravia</option><option>Azua</option><option>San Pedro de Macorís</option><option>La Romana</option><option>Higüey</option><option>El Seibo</option><option>Hato Mayor</option><option>Puerto Plata</option><option>Otra</option></select>
         </div>
         <div class="field">
-          <label>Georreferencia GPS</label>
-          <button type="button" onclick="captureGeo('f')" id="f-geo-btn" style="display:flex;align-items:center;gap:8px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:8px 14px;font-size:14px;color:var(--green-dark);cursor:pointer;font-family:inherit">📍 <span id="f-geo-text">Capturar GPS</span></button>
-          <div id="f-geo-coords" style="font-size:12px;color:var(--text2);margin-top:4px;font-family:monospace"></div>
+          <label>Ubicación del cliente</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px">
+            <button type="button" onclick="captureGeo('f')" id="f-geo-btn" style="display:flex;align-items:center;justify-content:center;gap:6px;background:var(--green-light);border:0.5px solid var(--green-border);border-radius:var(--rsm);padding:9px 12px;font-size:13px;color:var(--green-dark);cursor:pointer;font-family:inherit">📍 <span id="f-geo-text">GPS automático</span></button>
+            <button type="button" onclick="toggleMapaCliente()" id="f-map-btn" style="display:flex;align-items:center;justify-content:center;gap:6px;background:var(--blue-light);border:0.5px solid var(--blue-border);border-radius:var(--rsm);padding:9px 12px;font-size:13px;color:var(--blue-dark);cursor:pointer;font-family:inherit">🗺️ Buscar en mapa</button>
+          </div>
+          <div id="f-geo-coords" style="font-size:12px;color:var(--text2);margin-top:6px;font-family:monospace"></div>
+          <div id="f-mapa-cliente-section" style="display:none;margin-top:10px">
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <input type="text" id="f-map-search" placeholder="Buscar lugar o negocio..." style="flex:1;padding:9px 12px;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--rsm);font-size:16px;color:var(--text);font-family:inherit;outline:none" autocomplete="off" onkeydown="if(event.key==='Enter')buscarLugarCliente()"/>
+              <button type="button" onclick="buscarLugarCliente()" style="padding:9px 14px;background:var(--blue-light);border:0.5px solid var(--blue-border);border-radius:var(--rsm);font-size:13px;color:var(--blue-dark);cursor:pointer;font-family:inherit">Buscar</button>
+            </div>
+            <div id="f-map-results" style="display:none;border:0.5px solid var(--border);border-radius:var(--rsm);overflow:hidden;background:var(--card);margin-bottom:8px"></div>
+            <div id="f-mapa-cliente" style="height:240px;border-radius:var(--rsm);overflow:hidden;border:0.5px solid var(--border)"></div>
+            <div style="font-size:12px;color:var(--text3);margin-top:4px;text-align:center">Toca el mapa para marcar la ubicación exacta</div>
+          </div>
         </div>
       </div>
       <div class="sec-label">Información comercial</div>
@@ -913,6 +925,72 @@ function verCliente(nombre) {
 }
 
 // FORMULARIO
+let clienteMapInstance = null;
+let clienteMapMarker = null;
+
+function toggleMapaCliente() {
+  const section = document.getElementById('f-mapa-cliente-section');
+  const isVisible = section.style.display !== 'none';
+  section.style.display = isVisible ? 'none' : 'block';
+  if(!isVisible) {
+    setTimeout(() => {
+      if(!clienteMapInstance) {
+        clienteMapInstance = L.map('f-mapa-cliente').setView([18.7357, -69.0633], 8);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'OpenStreetMap'}).addTo(clienteMapInstance);
+        clienteMapInstance.on('click', function(e) {
+          marcarUbicacionCliente(e.latlng.lat, e.latlng.lng);
+        });
+      } else {
+        clienteMapInstance.invalidateSize();
+      }
+    }, 150);
+  }
+}
+
+function marcarUbicacionCliente(lat, lng) {
+  if(clienteMapMarker) clienteMapMarker.remove();
+  const icon = L.divIcon({html:'<div style="width:14px;height:14px;border-radius:50%;background:#1D9E75;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3)"></div>',iconSize:[14,14],className:''});
+  clienteMapMarker = L.marker([lat,lng],{icon}).addTo(clienteMapInstance);
+  clienteMapMarker.bindPopup('📍 Ubicación del cliente').openPopup();
+  geoLat.f = lat.toFixed(6);
+  geoLng.f = lng.toFixed(6);
+  document.getElementById('f-geo-coords').textContent = geoLat.f + ', ' + geoLng.f + ' ✓ (manual)';
+  document.getElementById('f-geo-text').textContent = 'GPS capturado ✓';
+  showToast('Ubicación marcada en el mapa');
+}
+
+async function buscarLugarCliente() {
+  const q = document.getElementById('f-map-search').value.trim();
+  if(!q) return;
+  const resultsEl = document.getElementById('f-map-results');
+  resultsEl.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--text3)">Buscando...</div>';
+  resultsEl.style.display = 'block';
+  try {
+    const res = await fetch('https://nominatim.openstreetmap.org/search?q='+encodeURIComponent(q+' Dominican Republic')+'&format=json&limit=5&countrycodes=do');
+    const data = await res.json();
+    if(data && data.length > 0) {
+      window._clienteSearchResults = data;
+      resultsEl.innerHTML = data.map((item,i) => {
+        const nombre = item.display_name.split(',').slice(0,2).join(', ');
+        const tipo = item.type||item.class||'';
+        return `<div onclick="selResultadoCliente(${i})" style="padding:10px 14px;border-bottom:0.5px solid var(--border);cursor:pointer;font-size:13px;color:var(--text)"><div style="font-weight:500">${nombre}</div><div style="font-size:11px;color:var(--text3)">${tipo}</div></div>`;
+      }).join('');
+    } else {
+      resultsEl.innerHTML = '<div style="padding:10px 14px;font-size:13px;color:var(--text3)">No encontrado. Toca el mapa para marcar.</div>';
+    }
+  } catch(e) { showToast('Error buscando lugar', true); }
+}
+
+function selResultadoCliente(i) {
+  const item = window._clienteSearchResults[i];
+  if(!item) return;
+  document.getElementById('f-map-results').style.display = 'none';
+  const lat = parseFloat(item.lat);
+  const lng = parseFloat(item.lon);
+  clienteMapInstance.setView([lat, lng], 15);
+  marcarUbicacionCliente(lat, lng);
+}
+
 function captureGeo(prefix) {
   const btn = document.getElementById(prefix+'-geo-btn');
   const text = document.getElementById(prefix+'-geo-text');
